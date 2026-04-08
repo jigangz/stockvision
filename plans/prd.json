@@ -365,8 +365,9 @@
         "Click stock jumps to K-line chart"
       ],
       "priority": "low",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "completed_at": "2026-04-08",
+      "notes": "GET /api/heatmap/sectors: sectors+stocks with volume/market_cap/change_pct; SectorHeatmap.tsx: D3 treemap with red/green gradient, volume/market_cap switchable, sector drill-down, click stock to jump. 17 Python tests pass (164 total)."
     },
     {
       "id": "P5-3",

@@ -222,6 +222,21 @@ created: 2026-04-07
 - Internal `_candles` field excluded from API response by filtering keys starting with `_`
 - Click-to-jump: `useChartStore.setCode(stock.code)` + `setMarket(stock.market)` then `onClose()` — ChartContainer's useEffect fires automatically
 
+## 2026-04-08 — P5-2: 板块热力图 SectorHeatmap
+
+### What was built
+- **`python/api/heatmap.py`**: `GET /api/heatmap/sectors` — aggregates MockAdapter stocks by sector, returns each sector's name/change_pct/volume/market_cap/stock_count with nested stock list. Market cap simulated from close × estimated shares outstanding. Sectors sorted by volume.
+- **`python/main.py`**: Registered `heatmap_router`.
+- **`src/components/chart/SectorHeatmap.tsx`**: Modal dialog with D3.js treemap. Two-level view: sector overview (default) + stock drill-down (click sector). Area mode switchable between volume and market_cap. Color: red gradient for positive change_pct, green gradient for negative (A-share convention), capped at ±5% intensity. Click stock → sets chartStore code+market and closes dialog.
+- **`src/components/chart/ChartContainer.tsx`**: Added "热力图" toolbar button + `showHeatmap` state.
+- **`tests/python/test_heatmap.py`**: 17 tests covering structure, sector aggregation, stock fields, data quality (all 8 stocks covered, no duplicates, avg_change_pct derived correctly, total_volume summed correctly).
+
+### Key patterns learned
+- D3 treemap with React: use `svgRef` + `d3.select(svgRef.current)`, clear with `svg.selectAll('*').remove()` on each render. Wrap in `useEffect([data, areaMode, selectedSector])`.
+- For TypeScript strict mode with D3 hierarchy, cast `root.leaves()` to the layout node type explicitly.
+- Stock market field must be typed as `'SH' | 'SZ'` (not `string`) to match chartStore.setMarket signature.
+- `containerRef.current.getBoundingClientRect()` for responsive sizing inside a flex container.
+
 ## 2026-04-08 — P2-GATE: Phase 2 Gate
 
 ### Verification

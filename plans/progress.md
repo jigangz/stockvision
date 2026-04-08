@@ -237,6 +237,21 @@ created: 2026-04-07
 - Stock market field must be typed as `'SH' | 'SZ'` (not `string`) to match chartStore.setMarket signature.
 - `containerRef.current.getBoundingClientRect()` for responsive sizing inside a flex container.
 
+## 2026-04-08 — P5-3: 资金流向分析 CapitalFlowDialog
+
+### What was built
+- **`python/api/capital_flow.py`**: `GET /api/capital_flow` — accepts code/market/period. Uses MockAdapter to get last 30 trading days of OHLCV data. For each day, simulates capital flow: distributes volume+amount into large (>50万), medium (5-50万), small (<5万) categories using seeded random. Each category has buy/sell/net volume+amount. Returns `today` (last entry) + full `history`.
+- **`python/main.py`**: Registered `capital_flow_router`.
+- **`src/components/chart/CapitalFlowDialog.tsx`**: Modal dialog. Top section: `TodayTable` showing all three categories + main force summary row (buy/sell/net volume+amount). Bottom section: `HistoryChart` — D3 grouped bar chart with one bar group per date, three sub-bars per group (large/medium/small net_amount). Legend on right. X-axis dates (every Nth label). Y-axis formatted with 亿/万 suffix.
+- **`src/components/chart/ChartContainer.tsx`**: Added "资金流向" toolbar button + `showCapitalFlow` state.
+- **`tests/python/test_capital_flow.py`**: 17 tests covering response structure, category fields, buy/sell/net math invariants, date ordering, multiple stocks, history length.
+
+### Key patterns learned
+- Seeded random with `hash(f"{code}_flow_{date_str}")` ensures reproducible flow data per stock+date
+- net_amount = buy_amount - sell_amount (invariant tested explicitly)
+- D3 grouped bars: `x.bandwidth() / 3` for sub-bar width; three loops over CATEGORIES each appending rects
+- Colors: large=red, medium=orange, small=green (lighter shade for negative bars via `color + '88'`)
+
 ## 2026-04-08 — P2-GATE: Phase 2 Gate
 
 ### Verification

@@ -15,6 +15,7 @@ import { IntervalStatsDialog } from '@/components/chart/IntervalStatsDialog';
 import { FormulaEditor } from '@/components/chart/FormulaEditor';
 import { StockScreener } from '@/components/chart/StockScreener';
 import { SectorHeatmap } from '@/components/chart/SectorHeatmap';
+import { CapitalFlowDialog } from '@/components/chart/CapitalFlowDialog';
 import type { FormulaSeries } from '@/components/chart/IndicatorChart';
 import { useDataStore } from '@/stores/dataStore';
 import { useChartStore } from '@/stores/chartStore';
@@ -42,6 +43,7 @@ export function ChartContainer(): React.ReactElement {
   const [showFormula, setShowFormula] = useState(false);
   const [showScreener, setShowScreener] = useState(false);
   const [showHeatmap, setShowHeatmap] = useState(false);
+  const [showCapitalFlow, setShowCapitalFlow] = useState(false);
   const [formulaOverlay, setFormulaOverlay] = useState<FormulaSeries[]>([]);
   const [drawingChart, setDrawingChart] = useState<IChartApi | null>(null);
   const [drawingSeries, setDrawingSeries] = useState<ISeriesApi<SeriesType> | null>(null);
@@ -216,6 +218,7 @@ export function ChartContainer(): React.ReactElement {
     >
       {/* Chart toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: 24, padding: '0 4px', background: 'var(--bg-secondary)', flexShrink: 0 }}>
+        <button style={toolbarBtnStyle} onClick={() => setShowCapitalFlow(true)}>资金流向</button>
         <button style={toolbarBtnStyle} onClick={() => setShowHeatmap(true)}>热力图</button>
         <button style={toolbarBtnStyle} onClick={() => setShowScreener(true)}>选股</button>
         <button style={toolbarBtnStyle} onClick={() => setShowFormula(true)}>公式</button>
@@ -248,6 +251,7 @@ export function ChartContainer(): React.ReactElement {
         </div>
       </div>
 
+      {showCapitalFlow && <CapitalFlowDialog onClose={() => setShowCapitalFlow(false)} />}
       {showHeatmap && <SectorHeatmap onClose={() => setShowHeatmap(false)} />}
       {showScreener && <StockScreener onClose={() => setShowScreener(false)} />}
       {showSettings && <ChartSettingsDialog onClose={() => setShowSettings(false)} />}

@@ -379,8 +379,9 @@
         "Each shows: buy / sell / net volume / net amount"
       ],
       "priority": "low",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "",
+      "completed_at": "2026-04-08T06:16:03"
     },
     {
       "id": "P5-4",

@@ -145,6 +145,24 @@ created: 2026-04-07
 - Price-time coordinate storage (not pixels) = no drift on zoom/scroll ✓
 - Future blank area works (LW Charts extrapolates time scale naturally) ✓
 
+## 2026-04-08 — P4-1: 指标计算引擎 (20+ indicators)
+
+### What was built
+- **`python/data/indicators_calc.py`**: Pure pandas/numpy implementation of all 22 indicators. Each function accepts a DataFrame and returns `{series: [{name, type, data}]}`. Dispatched via `INDICATOR_FUNCS` dict.
+- **`python/api/indicators.py`**: FastAPI router `POST /api/indicators/calculate` (accepts raw candle data + indicator name) and `GET /api/indicators/list`.
+- **`python/main.py`**: Registered `indicators_router`.
+- **`src/stores/indicatorStore.ts`**: Zustand store tracking `activeIndicator` (default 'MACD'), `indicatorData`, `loading`, `error`.
+- **`src/components/chart/IndicatorTabBar.tsx`**: Scrollable tab bar with all 22 indicator names; active tab highlighted with `--color-up` bottom border.
+- **`src/components/chart/IndicatorChart.tsx`**: Refactored to fetch `POST /api/indicators/calculate` when `activeIndicator` or `candles` changes. Dynamically renders LineSeries/HistogramSeries from returned data. Clears old series before adding new ones.
+- **`src/components/chart/ChartContainer.tsx`**: Added `<IndicatorTabBar />` above the indicator chart area.
+- **`tests/python/test_indicators.py`**: 56 tests covering endpoint structure, all 22 indicators, finite values, error handling.
+
+### Key patterns learned
+- Dynamic LW Charts series: call `chart.removeSeries(s)` for each old series, then `chart.addLineSeries`/`addHistogramSeries` for new ones
+- SAR uses iterative calculation (no vectorized form); EMV divides by (volume/1e6) to normalize large volumes
+- All indicator series colors set at the Python layer (returned in `data[i].color` for histograms, or implied by series order for lines)
+- `_rma()` uses `ewm(alpha=1/period)` for Wilder's smoothing (used in RSI, DMI)
+
 ## 2026-04-08 — P2-GATE: Phase 2 Gate
 
 ### Verification

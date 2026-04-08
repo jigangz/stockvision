@@ -287,8 +287,9 @@
         "Indicator values match pandas-ta reference output"
       ],
       "priority": "medium",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "completed_at": "2026-04-08",
+      "notes": "indicators_calc.py: all 22 indicators (MACD/DMA/DMI/TRIX/FSL/EMV/RSI/KDJ/WR/CCI/ROC/MTM/PSY/VOL/OBV/VR/ASI/BOLL/SAR/BRAR/CR/MOST) using pandas/numpy. POST /api/indicators/calculate + GET /api/indicators/list. Frontend: indicatorStore.ts, IndicatorTabBar.tsx (22-tab scrollable bar), IndicatorChart.tsx refactored to fetch backend + render dynamic series. 76/76 tests pass."
     },
     {
       "id": "P4-2",

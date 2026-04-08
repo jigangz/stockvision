@@ -10,6 +10,7 @@ import { ChartSettingsDialog } from '@/components/chart/ChartSettingsDialog';
 import { PriceScaleDialog } from '@/components/chart/PriceScaleDialog';
 import { DrawingCanvas } from '@/components/chart/DrawingCanvas';
 import { DrawingToolbar } from '@/components/chart/DrawingToolbar';
+import { IndicatorTabBar } from '@/components/chart/IndicatorTabBar';
 import { useDataStore } from '@/stores/dataStore';
 import { useChartStore } from '@/stores/chartStore';
 import { useCrosshairStore } from '@/stores/crosshairStore';
@@ -224,10 +225,13 @@ export function ChartContainer(): React.ReactElement {
         <Crosshair chartArea="volume" />
       </div>
 
-      {/* Indicator (MACD) area */}
-      <div style={chartAreaStyle('0 0 25%')}>
-        <IndicatorChart ref={indicatorRef} candles={candles} />
-        <Crosshair chartArea="indicator" />
+      {/* Indicator area with tab bar */}
+      <div style={{ flex: '0 0 25%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <IndicatorTabBar />
+        <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+          <IndicatorChart ref={indicatorRef} candles={candles} />
+          <Crosshair chartArea="indicator" />
+        </div>
       </div>
 
       {showSettings && <ChartSettingsDialog onClose={() => setShowSettings(false)} />}

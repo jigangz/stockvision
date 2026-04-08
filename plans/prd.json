@@ -302,8 +302,9 @@
         "Layout matches 通达信 reference"
       ],
       "priority": "medium",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "completed_at": "2026-04-08",
+      "notes": "IntervalStatsDialog.tsx: date range picker + 2-column layout (price stats left, capital/volatility right); POST /api/stats/interval (python/api/stats.py): period_return/high/low/open/close/amplitude/avg_price + total_volume/amount/daily_avg/std/max_return/loss/annualized_vol; 13 tests all pass"
     },
     {
       "id": "P4-3",

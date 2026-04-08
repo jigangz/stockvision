@@ -11,6 +11,7 @@ import { PriceScaleDialog } from '@/components/chart/PriceScaleDialog';
 import { DrawingCanvas } from '@/components/chart/DrawingCanvas';
 import { DrawingToolbar } from '@/components/chart/DrawingToolbar';
 import { IndicatorTabBar } from '@/components/chart/IndicatorTabBar';
+import { IntervalStatsDialog } from '@/components/chart/IntervalStatsDialog';
 import { useDataStore } from '@/stores/dataStore';
 import { useChartStore } from '@/stores/chartStore';
 import { useCrosshairStore } from '@/stores/crosshairStore';
@@ -33,6 +34,7 @@ export function ChartContainer(): React.ReactElement {
 
   const [showSettings, setShowSettings] = useState(false);
   const [showPriceScale, setShowPriceScale] = useState(false);
+  const [showIntervalStats, setShowIntervalStats] = useState(false);
   const [drawingChart, setDrawingChart] = useState<IChartApi | null>(null);
   const [drawingSeries, setDrawingSeries] = useState<ISeriesApi<SeriesType> | null>(null);
 
@@ -206,6 +208,7 @@ export function ChartContainer(): React.ReactElement {
     >
       {/* Chart toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: 24, padding: '0 4px', background: 'var(--bg-secondary)', flexShrink: 0 }}>
+        <button style={toolbarBtnStyle} onClick={() => setShowIntervalStats(true)}>区间统计</button>
         <button style={toolbarBtnStyle} onClick={() => setShowPriceScale(true)}>坐标</button>
         <button style={toolbarBtnStyle} onClick={() => setShowSettings(true)}>设置</button>
       </div>
@@ -236,6 +239,7 @@ export function ChartContainer(): React.ReactElement {
 
       {showSettings && <ChartSettingsDialog onClose={() => setShowSettings(false)} />}
       {showPriceScale && <PriceScaleDialog onClose={() => setShowPriceScale(false)} />}
+      {showIntervalStats && <IntervalStatsDialog onClose={() => setShowIntervalStats(false)} />}
     </div>
   );
 }

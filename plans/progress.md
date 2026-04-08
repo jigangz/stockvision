@@ -163,6 +163,21 @@ created: 2026-04-07
 - All indicator series colors set at the Python layer (returned in `data[i].color` for histograms, or implied by series order for lines)
 - `_rma()` uses `ewm(alpha=1/period)` for Wilder's smoothing (used in RSI, DMI)
 
+## 2026-04-08 — P4-2: 区间统计弹窗
+
+### What was built
+- **`python/api/stats.py`**: FastAPI router `POST /api/stats/interval`. Accepts raw candle data + optional date filters. Returns two-column stats: left (price) = period_return, period_high/low/open/close, amplitude, avg_price; right (capital/volatility) = total_volume/amount, daily averages, max_daily_return/loss, return_std, annualized_volatility.
+- **`python/main.py`**: Registered `stats_router`.
+- **`src/components/chart/IntervalStatsDialog.tsx`**: Modal dialog with date range pickers (defaulting to first/last candle dates), query button, two-column result layout. Colors: red for up values, green for down. Volume/amount auto-formatted (万/亿). All colors via CSS vars.
+- **`src/components/chart/ChartContainer.tsx`**: Added "区间统计" button to toolbar, `showIntervalStats` state, renders `<IntervalStatsDialog />`.
+- **`tests/python/test_stats.py`**: 13 tests covering structure, field presence, correct calculations, date filtering, edge cases (empty data, single candle, out-of-range filter, 'time' key).
+
+### Key patterns learned
+- Stats endpoint accepts both 'date' and 'time' keys for candle dicts (normalize at ingestion)
+- Average price = sum(amount) / sum(volume); fallback to avg(close) if amounts are zero
+- Annualized volatility = daily_return_std * sqrt(252) (convention for daily data)
+- Dialog reads candles directly from Zustand dataStore — no extra API call needed for candle data
+
 ## 2026-04-08 — P2-GATE: Phase 2 Gate
 
 ### Verification

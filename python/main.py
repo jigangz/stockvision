@@ -13,6 +13,7 @@ from api.data import router as data_router, set_adapter
 from api.config import router as config_router
 from api.drawings import router as drawings_router
 from api.indicators import router as indicators_router
+from api.stats import router as stats_router
 from data.mock_adapter import MockAdapter
 
 app = FastAPI(title="StockVision API", version="0.1.0")
@@ -34,6 +35,7 @@ app.include_router(data_router)
 app.include_router(config_router)
 app.include_router(drawings_router)
 app.include_router(indicators_router)
+app.include_router(stats_router)
 
 
 @app.get("/api/health")

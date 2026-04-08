@@ -41,3 +41,18 @@ created: 2026-04-07
 - LW Charts `autoscaleInfoProvider` on series is the way to set fixed price range in v4
 - `subscribeVisibleLogicalRangeChange` can detect rightOffset changes (range.to - dataLength gives offset)
 - Config persistence: simple key/value SQLite table, all stored as strings
+
+## 2026-04-08 — P2-4: 右侧信息面板 InfoPanel
+
+### What was built
+- **InfoPanel.tsx**: Right-side panel with three sections: MarketSummary, TickList, SectorLinks
+- **MarketSummary**: Shows latest price, open, prev close, change%, volume, amount, high, low from last candle in dataStore
+- **TickList**: Shows last 30 candles (newest first) as scrollable tick list with time/price/volume columns; red for up, green for down
+- **SectorLinks**: 12 fixed sector quick-link buttons in 2-column grid layout
+- **Collapse/expand**: Header button toggles panel content visibility
+- **InfoPanel.module.css**: All colors use CSS variables, no hardcoded hex
+
+### Key patterns learned
+- InfoPanel reads directly from Zustand stores (dataStore + chartStore) — no new API needed for this phase
+- TickList uses recent candles as proxy for real tick data (acceptable for Phase 2 scope)
+- Collapse/expand managed with local `useState` in InfoPanel — no need for global store

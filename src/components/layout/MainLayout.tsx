@@ -2,6 +2,7 @@ import styles from './MainLayout.module.css';
 import { TopNav } from './TopNav';
 import { StatusBar } from './StatusBar';
 import { ChartContainer } from '@/components/chart/ChartContainer';
+import { InfoPanel } from './InfoPanel';
 
 export function MainLayout() {
   return (
@@ -12,7 +13,7 @@ export function MainLayout() {
           <ChartContainer />
         </div>
         <div className={styles.infoPanel}>
-          <div className={styles.placeholder}>Info Panel</div>
+          <InfoPanel />
         </div>
       </div>
       <StatusBar />

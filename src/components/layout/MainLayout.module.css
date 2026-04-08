@@ -49,12 +49,3 @@
   overflow-y: auto;
   padding: 8px;
 }
-
-.placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--text-muted);
-  font-size: 14px;
-}

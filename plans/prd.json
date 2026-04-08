@@ -176,8 +176,9 @@
         "Panel collapse/expand works"
       ],
       "priority": "medium",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "completed_at": "2026-04-08",
+      "notes": "InfoPanel.tsx: MarketSummary from last candle, TickList from recent 30 bars (newest first), 12 sector quick links, collapse/expand toggle button"
     },
     {
       "id": "P2-GATE",

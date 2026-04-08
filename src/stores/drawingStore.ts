@@ -13,8 +13,12 @@ export type DrawingToolType =
   | 'vertical'
   | 'channel'
   | 'fibRetracement'
+  | 'gannAngle'
   | 'rectangle'
-  | 'text';
+  | 'text'
+  | 'buyMark'
+  | 'sellMark'
+  | 'flatMark';
 
 export interface DrawingStyle {
   color: string;

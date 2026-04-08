@@ -9,6 +9,7 @@ import { InfoTooltip } from '@/components/chart/InfoTooltip';
 import { ChartSettingsDialog } from '@/components/chart/ChartSettingsDialog';
 import { PriceScaleDialog } from '@/components/chart/PriceScaleDialog';
 import { DrawingCanvas } from '@/components/chart/DrawingCanvas';
+import { DrawingToolbar } from '@/components/chart/DrawingToolbar';
 import { useDataStore } from '@/stores/dataStore';
 import { useChartStore } from '@/stores/chartStore';
 import { useCrosshairStore } from '@/stores/crosshairStore';
@@ -205,6 +206,7 @@ export function ChartContainer(): React.ReactElement {
       <div style={chartAreaStyle('0 0 55%')}>
         <KLineChart ref={klineRef} />
         <DrawingCanvas chart={drawingChart} series={drawingSeries} />
+        <DrawingToolbar />
         <Crosshair chartArea="kline" />
         <InfoTooltip />
       </div>

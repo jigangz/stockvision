@@ -135,8 +135,8 @@
         "Red bg for tooltip, red/green coloring for values"
       ],
       "priority": "medium",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed in session: crosshair + tooltip + wheel zoom"
     },
     {
       "id": "P2-2",
@@ -148,8 +148,8 @@
         "150ms ease-out animation"
       ],
       "priority": "medium",
-      "passes": false,
-      "notes": "Lightweight Charts native handleScroll + handleScale"
+      "passes": true,
+      "notes": "Completed in session: crosshair + tooltip + wheel zoom"
     },
     {
       "id": "P2-3",

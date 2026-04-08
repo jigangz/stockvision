@@ -337,6 +337,22 @@ created: 2026-04-07
 - PageUp/Down zoom: scale visible range by 0.7/1.4 around center point via `setVisibleLogicalRange`
 - Home/End: keep same size range, shift `from/to` to start/end of data
 
+## 2026-04-08 — P6-4: Tauri 打包发布
+
+### What was built
+- **`python/main_sidecar.py`**: Clean uvicorn entry point (no reload) for PyInstaller — handles `sys._MEIPASS` path injection for one-file mode.
+- **`python/stockvision_backend.spec`**: PyInstaller spec file that bundles the full FastAPI backend into a single `python-backend.exe`. Lists all hidden imports (uvicorn internals, lark, pandas, all internal modules).
+- **`src-tauri/tauri.conf.json`**: Added `"externalBin": ["binaries/python-backend"]` to `bundle` section.
+- **`src-tauri/src/lib.rs`**: Spawns `python-backend` sidecar via `tauri_plugin_shell` in `setup` hook; stores `CommandChild` in managed state; kills sidecar on `CloseRequested` window event. Gracefully handles missing binary (dev mode).
+- **`scripts/build_sidecar.bat`**: Windows build script: runs PyInstaller, detects Rust target triple via `rustc -Vv`, renames output to `python-backend-<triple>.exe` in `src-tauri/binaries/`.
+
+### Key patterns learned
+- Tauri 2.x sidecar binary must be named `<name>-<rust-target-triple>.exe` in `src-tauri/binaries/`
+- `tauri_plugin_shell::ShellExt::sidecar("name")` spawns via name (no extension/triple needed in code)
+- Store `CommandChild` in `Mutex<Option<CommandChild>>` managed state so `on_window_event` can kill it
+- PyInstaller `console=False` prevents a CMD window from flashing on sidecar start
+- Missing sidecar binary is expected during `npm run tauri dev` (backend started separately) — must not panic
+
 ## 2026-04-08 — P2-GATE: Phase 2 Gate
 
 ### Verification

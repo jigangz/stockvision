@@ -470,8 +470,9 @@
         "App launches and all features work from installed version"
       ],
       "priority": "low",
-      "passes": false,
-      "notes": "用户是老人，必须双击安装即可使用"
+      "passes": true,
+      "completed_at": "2026-04-08",
+      "notes": "PyInstaller spec (python/stockvision_backend.spec) + entry point (python/main_sidecar.py) created. tauri.conf.json externalBin set to binaries/python-backend. lib.rs spawns sidecar on startup, kills on window close. scripts/build_sidecar.bat automates rename to triple-suffixed binary. 0 TS errors, 228/228 tests pass."
     },
     {
       "id": "P6-5",

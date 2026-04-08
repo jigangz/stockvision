@@ -20,7 +20,7 @@
         "App builds and opens empty window"
       ],
       "priority": "high",
-      "passes": false,
+      "passes": true,
       "notes": "Foundation task — everything depends on this"
     },
     {
@@ -33,7 +33,7 @@
         "No hardcoded colors in components"
       ],
       "priority": "high",
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -46,7 +46,7 @@
         "InfoPanel is collapsible"
       ],
       "priority": "high",
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -60,7 +60,7 @@
         "Chart renders with mock data"
       ],
       "priority": "high",
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -72,7 +72,7 @@
         "Period switching triggers data reload"
       ],
       "priority": "high",
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -85,7 +85,7 @@
         "Three charts share timeScale, sync on scroll/zoom"
       ],
       "priority": "high",
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -101,7 +101,7 @@
         "GET /api/data/stocks returns stock list"
       ],
       "priority": "high",
-      "passes": false,
+      "passes": true,
       "notes": "Data adapter 抽象层 — dev 用 mock, prod 切 AKShare/Tushare/通达信"
     },
     {
@@ -118,7 +118,7 @@
         "All unit tests pass"
       ],
       "priority": "high",
-      "passes": false,
+      "passes": true,
       "notes": "PHASE GATE: 必须全部通过才能进入 Phase 2"
     },
     {

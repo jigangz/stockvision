@@ -56,3 +56,16 @@ created: 2026-04-07
 - InfoPanel reads directly from Zustand stores (dataStore + chartStore) — no new API needed for this phase
 - TickList uses recent candles as proxy for real tick data (acceptable for Phase 2 scope)
 - Collapse/expand managed with local `useState` in InfoPanel — no need for global store
+
+## 2026-04-08 — P2-GATE: Phase 2 Gate
+
+### Verification
+- TypeScript: 0 errors
+- Python tests: 13/13 passed
+- All P2 tasks (P2-1 through P2-4) confirmed passing
+
+### Gate criteria met
+- Crosshair + tooltip (P2-1) ✓
+- Wheel zoom (P2-2) ✓
+- Right blank/price scale settings with SQLite persistence (P2-3) ✓
+- InfoPanel with MarketSummary, TickList, SectorLinks (P2-4) ✓

@@ -384,6 +384,29 @@ created: 2026-04-07
 - Right blank/price scale settings with SQLite persistence (P2-3) ✓
 - InfoPanel with MarketSummary, TickList, SectorLinks (P2-4) ✓
 
+## 2026-04-08 — FIX-1: 补齐画线工具至 20+
+
+### What was built
+- **`src/stores/drawingStore.ts`**: Added 7 new tool types to `DrawingToolType` union: `parallel_line | price_line | arrow | arc | fib_fan | fib_arc | fib_timezone`
+- **`src/components/chart/DrawingToolbar.tsx`**: TOOLS array now has 20 entries (+ 7 new tools with icons/tooltips)
+- **`src/components/chart/DrawingCanvas.tsx`**:
+  - Added constants: `FIB_FAN_LEVELS`, `FIB_ARC_LEVELS`, `FIB_TZ_SEQUENCE`
+  - Added `renderDrawing` cases for all 7 new tools
+  - `parallel_line`: 3-point tool, two extended parallel lines (no dashed fill vs channel)
+  - `price_line`: 1-point tool, horizontal line + price label box on right edge
+  - `arrow`: 2-point tool, line + arrowhead at p1
+  - `arc`: 2-point tool, semicircle with p0/p1 as endpoints
+  - `fib_fan`: 2-point tool, fan rays from p0 at Fibonacci ratios of vertical range
+  - `fib_arc`: 2-point tool, concentric circles at Fibonacci ratios of distance(p0,p1)
+  - `fib_timezone`: 2-point tool, vertical lines at Fibonacci-sequence × base unit from p0
+  - Updated `handleMouseDown`: `price_line` added to 1-point tools; `parallel_line` added to 3-point tool handling alongside `channel`
+
+### Key patterns learned
+- `parallel_line` vs `channel`: same 3-point geometry but no dashed connecting lines / fill
+- Fib arc: circles centered at p0 at 0.382/0.5/0.618/1.0 × base radius
+- Fib fan: rays from p0 through (p1.x, p0.y + level*(p1.y-p0.y)) for each level
+- Fib timezone: vertical lines at Fibonacci sequence values × (p1.x - p0.x) from p0.x
+
 ## 2026-04-08 — P6-GATE: Final Acceptance Gate
 
 ### Verification

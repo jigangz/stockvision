@@ -515,8 +515,9 @@
         "TypeScript 编译通过"
       ],
       "priority": "high",
-      "passes": false,
-      "notes": "Audit 发现只有 13 个画线工具，spec 要求 20+"
+      "passes": true,
+      "completed_at": "2026-04-08",
+      "notes": "Added 7 tools: parallel_line/price_line/arrow/arc/fib_fan/fib_arc/fib_timezone. drawingStore.ts union type extended. DrawingToolbar TOOLS array now has 20 entries. DrawingCanvas renderDrawing + handleMouseDown updated. 0 TS errors, 240/240 tests pass."
     },
     {
       "id": "FIX-2",

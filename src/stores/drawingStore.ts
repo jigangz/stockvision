@@ -20,7 +20,14 @@ export type DrawingToolType =
   | 'text'
   | 'buyMark'
   | 'sellMark'
-  | 'flatMark';
+  | 'flatMark'
+  | 'parallel_line'
+  | 'price_line'
+  | 'arrow'
+  | 'arc'
+  | 'fib_fan'
+  | 'fib_arc'
+  | 'fib_timezone';
 
 export interface DrawingStyle {
   color: string;

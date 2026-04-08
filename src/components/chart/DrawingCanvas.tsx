@@ -86,6 +86,10 @@ const FIB_LEVELS = [
   { level: 1.0, label: '100.0%' },
 ];
 
+const FIB_FAN_LEVELS = [0.236, 0.382, 0.5, 0.618, 0.786, 1.0];
+const FIB_ARC_LEVELS = [0.382, 0.5, 0.618, 1.0];
+const FIB_TZ_SEQUENCE = [1, 2, 3, 5, 8, 13, 21, 34, 55];
+
 const GANN_ANGLES = [
   { rY: 2, rX: 1, label: '1×2' },
   { rY: 1, rX: 1, label: '1×1' },
@@ -371,6 +375,162 @@ function renderDrawing(
     ctx.textBaseline = 'middle';
     ctx.fillText('=', p.x, p.y);
     ctx.restore();
+
+  } else if (drawing.type === 'parallel_line') {
+    // Two parallel lines: first through p0→p1, second through p2 parallel to it
+    if (!pts[0] || !pts[1]) return;
+    const [s1, e1] = extendLineFull(pts[0], pts[1], canvasWidth, canvasHeight);
+    ctx.beginPath();
+    ctx.moveTo(s1.x, s1.y);
+    ctx.lineTo(e1.x, e1.y);
+    ctx.stroke();
+    if (!pts[2]) return;
+    const dx = pts[1].x - pts[0].x;
+    const dy = pts[1].y - pts[0].y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len === 0) return;
+    const nx = -dy / len;
+    const ny = dx / len;
+    const offset = (pts[2].x - pts[0].x) * nx + (pts[2].y - pts[0].y) * ny;
+    const p2a = { x: pts[0].x + offset * nx, y: pts[0].y + offset * ny };
+    const p2b = { x: pts[1].x + offset * nx, y: pts[1].y + offset * ny };
+    const [s2, e2] = extendLineFull(p2a, p2b, canvasWidth, canvasHeight);
+    ctx.beginPath();
+    ctx.moveTo(s2.x, s2.y);
+    ctx.lineTo(e2.x, e2.y);
+    ctx.stroke();
+
+  } else if (drawing.type === 'price_line') {
+    // Horizontal line with price label on right
+    const p = pts[0];
+    if (!p) return;
+    ctx.beginPath();
+    ctx.moveTo(0, p.y);
+    ctx.lineTo(canvasWidth, p.y);
+    ctx.stroke();
+    // Price label
+    ctx.save();
+    const price = drawing.points[0].price;
+    const label = price.toFixed(2);
+    ctx.font = '10px monospace';
+    const metrics = ctx.measureText(label);
+    ctx.fillStyle = drawing.style.color;
+    ctx.fillRect(canvasWidth - metrics.width - 6, p.y - 8, metrics.width + 4, 14);
+    ctx.fillStyle = '#000';
+    ctx.fillText(label, canvasWidth - metrics.width - 4, p.y + 3);
+    ctx.restore();
+
+  } else if (drawing.type === 'arrow') {
+    // Line with arrowhead at p1
+    if (!pts[0] || !pts[1]) return;
+    const { x: x0, y: y0 } = pts[0];
+    const { x: x1, y: y1 } = pts[1];
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.stroke();
+    // Arrowhead
+    const angle = Math.atan2(y1 - y0, x1 - x0);
+    const headLen = 10 + drawing.style.lineWidth * 2;
+    ctx.save();
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x1 - headLen * Math.cos(angle - Math.PI / 6), y1 - headLen * Math.sin(angle - Math.PI / 6));
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x1 - headLen * Math.cos(angle + Math.PI / 6), y1 - headLen * Math.sin(angle + Math.PI / 6));
+    ctx.stroke();
+    ctx.restore();
+
+  } else if (drawing.type === 'arc') {
+    // Semicircular arc with p0 and p1 as endpoints
+    if (!pts[0] || !pts[1]) return;
+    const cx = (pts[0].x + pts[1].x) / 2;
+    const cy = (pts[0].y + pts[1].y) / 2;
+    const r = Math.sqrt((pts[1].x - pts[0].x) ** 2 + (pts[1].y - pts[0].y) ** 2) / 2;
+    const baseAngle = Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, baseAngle + Math.PI, baseAngle, false);
+    ctx.stroke();
+
+  } else if (drawing.type === 'fib_fan') {
+    // Fan lines from p0 through Fibonacci ratios of the vertical range at p1.x
+    if (!pts[0] || !pts[1]) return;
+    const anchor = pts[0];
+    const targetX = pts[1].x;
+    const yRange = pts[1].y - pts[0].y;
+    ctx.save();
+    ctx.font = '9px monospace';
+    for (const level of FIB_FAN_LEVELS) {
+      const targetY = anchor.y + level * yRange;
+      const dx = targetX - anchor.x;
+      const dy = targetY - anchor.y;
+      const end = extendRay(anchor, dx, dy, canvasWidth, canvasHeight);
+      ctx.strokeStyle = drawing.style.color;
+      ctx.lineWidth = drawing.style.lineWidth;
+      applyLineStyle(ctx, drawing.style.lineStyle, drawing.style.lineWidth);
+      ctx.beginPath();
+      ctx.moveTo(anchor.x, anchor.y);
+      ctx.lineTo(end.x, end.y);
+      ctx.stroke();
+      ctx.fillStyle = drawing.style.color;
+      ctx.fillText(`${(level * 100).toFixed(1)}%`, end.x + 2, end.y - 2);
+    }
+    ctx.restore();
+
+  } else if (drawing.type === 'fib_arc') {
+    // Arcs centered at p0 at Fibonacci ratios of distance(p0, p1)
+    if (!pts[0] || !pts[1]) return;
+    const cx = pts[0].x;
+    const cy = pts[0].y;
+    const baseR = Math.sqrt((pts[1].x - cx) ** 2 + (pts[1].y - cy) ** 2);
+    ctx.save();
+    ctx.font = '9px monospace';
+    for (const level of FIB_ARC_LEVELS) {
+      const r = baseR * level;
+      ctx.strokeStyle = drawing.style.color;
+      ctx.lineWidth = drawing.style.lineWidth;
+      applyLineStyle(ctx, drawing.style.lineStyle, drawing.style.lineWidth);
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = drawing.style.color;
+      ctx.fillText(`${(level * 100).toFixed(1)}%`, cx + r + 2, cy - 2);
+    }
+    // Anchor dot
+    ctx.fillStyle = drawing.style.color;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+  } else if (drawing.type === 'fib_timezone') {
+    // Vertical lines at Fibonacci multiples of the base unit (p0→p1 distance in pixels)
+    if (!pts[0] || !pts[1]) return;
+    const baseUnit = pts[1].x - pts[0].x;
+    if (Math.abs(baseUnit) < 1) return;
+    ctx.save();
+    ctx.font = '9px monospace';
+    ctx.fillStyle = drawing.style.color;
+    // Draw base line at p0
+    ctx.strokeStyle = drawing.style.color;
+    ctx.lineWidth = drawing.style.lineWidth;
+    applyLineStyle(ctx, drawing.style.lineStyle, drawing.style.lineWidth);
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, 0);
+    ctx.lineTo(pts[0].x, canvasHeight);
+    ctx.stroke();
+    for (let i = 0; i < FIB_TZ_SEQUENCE.length; i++) {
+      const xPos = pts[0].x + FIB_TZ_SEQUENCE[i] * baseUnit;
+      if (xPos < 0 || xPos > canvasWidth) continue;
+      ctx.beginPath();
+      ctx.moveTo(xPos, 0);
+      ctx.lineTo(xPos, canvasHeight);
+      ctx.stroke();
+      ctx.fillText(String(FIB_TZ_SEQUENCE[i]), xPos + 2, 12);
+    }
+    ctx.restore();
   }
 }
 
@@ -543,6 +703,7 @@ export function DrawingCanvas({ chart, series }: Props) {
       if (
         activeTool === 'horizontal' ||
         activeTool === 'vertical' ||
+        activeTool === 'price_line' ||
         activeTool === 'buyMark' ||
         activeTool === 'sellMark' ||
         activeTool === 'flatMark'
@@ -562,13 +723,13 @@ export function DrawingCanvas({ chart, series }: Props) {
         return;
       }
 
-      // 3-point tool: channel
-      if (activeTool === 'channel') {
+      // 3-point tools: channel, parallel_line
+      if (activeTool === 'channel' || activeTool === 'parallel_line') {
         if (ppts.length < 2) {
           addPendingPoint(pt);
         } else {
           commitDrawing({
-            type: 'channel',
+            type: activeTool,
             points: [ppts[0], ppts[1], pt],
             style: { ...activeStyle },
           });

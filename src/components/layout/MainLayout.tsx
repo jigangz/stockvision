@@ -1,6 +1,7 @@
 import styles from './MainLayout.module.css';
 import { TopNav } from './TopNav';
 import { StatusBar } from './StatusBar';
+import { ChartContainer } from '@/components/chart/ChartContainer';
 
 export function MainLayout() {
   return (
@@ -8,15 +9,7 @@ export function MainLayout() {
       <TopNav />
       <div className={styles.main}>
         <div className={styles.chartArea}>
-          <div className={styles.chartZoneK}>
-            <div className={styles.placeholder}>K-Line Chart</div>
-          </div>
-          <div className={styles.chartZoneVolume}>
-            <div className={styles.placeholder}>Volume</div>
-          </div>
-          <div className={styles.chartZoneIndicator}>
-            <div className={styles.placeholder}>MACD</div>
-          </div>
+          <ChartContainer />
         </div>
         <div className={styles.infoPanel}>
           <div className={styles.placeholder}>Info Panel</div>

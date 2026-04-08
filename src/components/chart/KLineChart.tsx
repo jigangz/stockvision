@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, type MutableRefObject } from 'react';
+import { useEffect, useRef, type MutableRefObject } from 'react';
 import {
   createChart,
   type IChartApi,
@@ -11,16 +11,12 @@ import { useDataStore, type OhlcvData } from '@/stores/dataStore';
 import { darkChartOptions, candleColors, maColors } from '@/theme/darkTheme';
 
 interface KLineChartProps {
-  width?: number;
-  height?: number;
-  /** Optional external ref to expose IChartApi for chart sync */
   chartRef?: MutableRefObject<IChartApi | null>;
 }
 
 function calcMA(data: OhlcvData[], period: number): LineData<Time>[] {
   const result: LineData<Time>[] = [];
-  for (let i = 0; i < data.length; i++) {
-    if (i < period - 1) continue;
+  for (let i = period - 1; i < data.length; i++) {
     let sum = 0;
     for (let j = i - period + 1; j <= i; j++) {
       sum += data[j].close;
@@ -43,30 +39,31 @@ function toCandlestickData(data: OhlcvData[]): CandlestickData<Time>[] {
   }));
 }
 
-export function KLineChart({ width, height, chartRef: externalChartRef }: KLineChartProps) {
+export function KLineChart({ chartRef: externalChartRef }: KLineChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<IChartApi | null>(null);
-  const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
-  const ma5Ref = useRef<ISeriesApi<'Line'> | null>(null);
-  const ma10Ref = useRef<ISeriesApi<'Line'> | null>(null);
-  const ma20Ref = useRef<ISeriesApi<'Line'> | null>(null);
-  const ma60Ref = useRef<ISeriesApi<'Line'> | null>(null);
+  const internals = useRef<{
+    chart: IChartApi;
+    candle: ISeriesApi<'Candlestick'>;
+    ma5: ISeriesApi<'Line'>;
+    ma10: ISeriesApi<'Line'>;
+    ma20: ISeriesApi<'Line'>;
+    ma60: ISeriesApi<'Line'>;
+  } | null>(null);
 
   const candles = useDataStore((s) => s.candles);
 
-  // Create chart on mount
+  // Create chart
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const el = containerRef.current;
+    if (!el) return;
 
-    const chart = createChart(container, {
+    const chart = createChart(el, {
       ...darkChartOptions,
-      width: width ?? container.clientWidth,
-      height: height ?? container.clientHeight,
-      autoSize: !width && !height,
+      autoSize: true,
+      timeScale: { ...darkChartOptions.timeScale, visible: false },
     });
 
-    const candleSeries = chart.addCandlestickSeries({
+    const candle = chart.addCandlestickSeries({
       upColor: candleColors.upColor,
       downColor: candleColors.downColor,
       wickUpColor: candleColors.wickUpColor,
@@ -74,96 +71,33 @@ export function KLineChart({ width, height, chartRef: externalChartRef }: KLineC
       borderVisible: false,
     });
 
-    const ma5 = chart.addLineSeries({
-      color: maColors.ma5,
-      lineWidth: 1,
-      priceLineVisible: false,
-      lastValueVisible: false,
-    });
-    const ma10 = chart.addLineSeries({
-      color: maColors.ma10,
-      lineWidth: 1,
-      priceLineVisible: false,
-      lastValueVisible: false,
-    });
-    const ma20 = chart.addLineSeries({
-      color: maColors.ma20,
-      lineWidth: 1,
-      priceLineVisible: false,
-      lastValueVisible: false,
-    });
-    const ma60 = chart.addLineSeries({
-      color: maColors.ma60,
-      lineWidth: 1,
-      priceLineVisible: false,
-      lastValueVisible: false,
-    });
+    const ma5 = chart.addLineSeries({ color: maColors.ma5, lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+    const ma10 = chart.addLineSeries({ color: maColors.ma10, lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+    const ma20 = chart.addLineSeries({ color: maColors.ma20, lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+    const ma60 = chart.addLineSeries({ color: maColors.ma60, lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
 
-    chartRef.current = chart;
+    internals.current = { chart, candle, ma5, ma10, ma20, ma60 };
     if (externalChartRef) externalChartRef.current = chart;
-    candleSeriesRef.current = candleSeries;
-    ma5Ref.current = ma5;
-    ma10Ref.current = ma10;
-    ma20Ref.current = ma20;
-    ma60Ref.current = ma60;
 
     return () => {
       chart.remove();
-      chartRef.current = null;
+      internals.current = null;
       if (externalChartRef) externalChartRef.current = null;
-      candleSeriesRef.current = null;
-      ma5Ref.current = null;
-      ma10Ref.current = null;
-      ma20Ref.current = null;
-      ma60Ref.current = null;
     };
-  }, [width, height, externalChartRef]);
+  }, [externalChartRef]);
 
-  // Update data when candles change
-  const updateData = useCallback((data: OhlcvData[]) => {
-    if (!candleSeriesRef.current) return;
-
-    candleSeriesRef.current.setData(toCandlestickData(data));
-    ma5Ref.current?.setData(calcMA(data, 5));
-    ma10Ref.current?.setData(calcMA(data, 10));
-    ma20Ref.current?.setData(calcMA(data, 20));
-    ma60Ref.current?.setData(calcMA(data, 60));
-
-    if (data.length > 0) {
-      chartRef.current?.timeScale().fitContent();
-    }
-  }, []);
-
+  // Update data
   useEffect(() => {
-    updateData(candles);
-  }, [candles, updateData]);
+    const api = internals.current;
+    if (!api || candles.length === 0) return;
 
-  // Handle resize when no explicit dimensions
-  useEffect(() => {
-    if (width || height) return;
+    api.candle.setData(toCandlestickData(candles));
+    api.ma5.setData(calcMA(candles, 5));
+    api.ma10.setData(calcMA(candles, 10));
+    api.ma20.setData(calcMA(candles, 20));
+    api.ma60.setData(calcMA(candles, 60));
+    api.chart.timeScale().fitContent();
+  }, [candles]);
 
-    const container = containerRef.current;
-    const chart = chartRef.current;
-    if (!container || !chart) return;
-
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width: w, height: h } = entry.contentRect;
-        chart.applyOptions({ width: w, height: h });
-      }
-    });
-
-    ro.observe(container);
-    return () => ro.disconnect();
-  }, [width, height]);
-
-  return (
-    <div
-      ref={containerRef}
-      style={{
-        width: width ? `${width}px` : '100%',
-        height: height ? `${height}px` : '100%',
-      }}
-    />
-  );
+  return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
 }

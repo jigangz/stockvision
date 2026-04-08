@@ -3,21 +3,8 @@ import type { IChartApi } from 'lightweight-charts';
 import { KLineChart } from '@/components/chart/KLineChart';
 import { VolumeChart, type VolumeChartHandle } from '@/components/chart/VolumeChart';
 import { IndicatorChart, type IndicatorChartHandle } from '@/components/chart/IndicatorChart';
-import { useChartSync } from '@/hooks/useChartSync';
 import { useDataStore } from '@/stores/dataStore';
 import { useChartStore } from '@/stores/chartStore';
-
-const containerStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  width: '100%',
-  height: '100%',
-  background: '#000000',
-};
-
-const klineStyle: React.CSSProperties = { flex: '0 0 55%', minHeight: 0 };
-const volumeStyle: React.CSSProperties = { flex: '0 0 20%', minHeight: 0 };
-const indicatorStyle: React.CSSProperties = { flex: '0 0 25%', minHeight: 0 };
 
 export function ChartContainer(): React.ReactElement {
   const candles = useDataStore((s) => s.candles);
@@ -26,38 +13,54 @@ export function ChartContainer(): React.ReactElement {
   const currentMarket = useChartStore((s) => s.currentMarket);
   const currentPeriod = useChartStore((s) => s.currentPeriod);
 
-  // Chart refs for sync
   const klineChartRef = useRef<IChartApi | null>(null);
-  const volumeHandleRef = useRef<VolumeChartHandle>(null);
-  const indicatorHandleRef = useRef<IndicatorChartHandle>(null);
-
-  // Wrapper refs that always point to the inner IChartApi
-  const volumeChartRef = useRef<IChartApi | null>(null);
-  const indicatorChartRef = useRef<IChartApi | null>(null);
-
-  // Keep wrapper refs in sync with handles
-  useEffect(() => {
-    volumeChartRef.current = volumeHandleRef.current?.chart ?? null;
-    indicatorChartRef.current = indicatorHandleRef.current?.chart ?? null;
-  });
-
-  useChartSync([klineChartRef, volumeChartRef, indicatorChartRef]);
+  const volumeRef = useRef<VolumeChartHandle>(null);
+  const indicatorRef = useRef<IndicatorChartHandle>(null);
 
   // Fetch data on mount and when code/period changes
   useEffect(() => {
     void fetchKline(currentCode, currentMarket, currentPeriod);
   }, [currentCode, currentMarket, currentPeriod, fetchKline]);
 
+  // Simple time-scale sync (no crosshair sync to avoid complexity)
+  useEffect(() => {
+    const kChart = klineChartRef.current;
+    const vChart = volumeRef.current?.chart;
+    const iChart = indicatorRef.current?.chart;
+    if (!kChart || !vChart || !iChart) return;
+
+    let syncing = false;
+    const charts = [kChart, vChart, iChart];
+    const unsubs: (() => void)[] = [];
+
+    for (const source of charts) {
+      const handler = (range: ReturnType<typeof source.timeScale>extends { getVisibleLogicalRange(): infer R } ? R : never) => {
+        if (syncing || range === null) return;
+        syncing = true;
+        for (const target of charts) {
+          if (target !== source && range) {
+            target.timeScale().setVisibleLogicalRange(range);
+          }
+        }
+        syncing = false;
+      };
+      source.timeScale().subscribeVisibleLogicalRangeChange(handler);
+      unsubs.push(() => source.timeScale().unsubscribeVisibleLogicalRangeChange(handler));
+    }
+
+    return () => unsubs.forEach((u) => u());
+  }, [candles]); // re-bind after data loads and charts are created
+
   return (
-    <div style={containerStyle}>
-      <div style={klineStyle}>
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', background: '#000000' }}>
+      <div style={{ flex: '0 0 55%', minHeight: 0 }}>
         <KLineChart chartRef={klineChartRef} />
       </div>
-      <div style={volumeStyle}>
-        <VolumeChart ref={volumeHandleRef} candles={candles} />
+      <div style={{ flex: '0 0 20%', minHeight: 0 }}>
+        <VolumeChart ref={volumeRef} candles={candles} />
       </div>
-      <div style={indicatorStyle}>
-        <IndicatorChart ref={indicatorHandleRef} candles={candles} />
+      <div style={{ flex: '0 0 25%', minHeight: 0 }}>
+        <IndicatorChart ref={indicatorRef} candles={candles} />
       </div>
     </div>
   );

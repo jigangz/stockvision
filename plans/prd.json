@@ -350,8 +350,9 @@
         "POST /api/screener/filter works correctly"
       ],
       "priority": "low",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "completed_at": "2026-04-08",
+      "notes": "screener.py: POST /api/screener/filter + GET /api/screener/fields; field conditions (AND logic), formula-based screening via formula_engine, sorting, limit; StockScreener.tsx: modal with condition builder (field/operator/value), formula textarea, sortable results table, click-to-jump; 23 tests pass"
     },
     {
       "id": "P5-2",

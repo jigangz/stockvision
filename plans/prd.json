@@ -222,8 +222,9 @@
         "Line width 1-5px selector"
       ],
       "priority": "medium",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "completed_at": "2026-04-08",
+      "notes": "DrawingToolbar.tsx: floating absolute panel over K-line area; 7-col grid with 13 tools + cursor cancel; color picker, line style (solid/dashed/dotted), line width (1-5px); all colors via CSS vars. Added gannAngle/buyMark/sellMark/flatMark to DrawingToolType."
     },
     {
       "id": "P3-3",

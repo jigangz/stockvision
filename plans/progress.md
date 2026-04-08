@@ -70,6 +70,23 @@ created: 2026-04-07
 - Canvas sizing: compare `getBoundingClientRect()` dims to `canvas.width/height` each redraw; reset to 0 to force full resize on ResizeObserver fire
 - Future blank area works automatically — LW Charts time scale extrapolates beyond last data point
 
+## 2026-04-08 — P3-2: 画线工具栏 DrawingToolbar
+
+### What was built
+- **`DrawingToolbar.tsx`**: Floating `position: absolute` panel in the K-line chart area (top-left, z-index 100)
+- **Tool grid**: 7-column grid with 13 tools: trendline/ray/segment/horizontal/vertical/channel/fibRetracement/gannAngle/rectangle/text/buyMark/sellMark/flatMark
+- **Cursor button**: ↖ cancels active tool (`setActiveTool(null)`)
+- **Color picker**: `<input type="color">` bound to `activeStyle.color`
+- **Line style row**: solid/dashed/dotted buttons
+- **Line width row**: 1-5px buttons
+- **Active state**: highlighted with `--color-up` background
+- **`drawingStore.ts`**: Added `gannAngle | buyMark | sellMark | flatMark` to `DrawingToolType`
+
+### Key patterns learned
+- Active tool toggle: `setActiveTool(activeTool === t.type ? null : t.type)` — clicking the active tool deselects it
+- `<input type="color">` works natively in Tauri WebView, no library needed
+- The toolbar is positioned inside the K-line area div which already has `position: relative`
+
 ## 2026-04-08 — P2-GATE: Phase 2 Gate
 
 ### Verification

@@ -217,6 +217,81 @@ def clear_drawings(stock_code: str, period: str) -> None:
     conn.close()
 
 
+def init_import_logs_table() -> None:
+    """Initialize SQLite import_logs table."""
+    _ensure_dir()
+    conn = sqlite3.connect(str(DB_PATH))
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS import_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            source TEXT NOT NULL,
+            filename TEXT NOT NULL,
+            count INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            details TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def add_import_log(
+    source: str,
+    filename: str,
+    count: int,
+    status: str,
+    details: str | None = None,
+) -> None:
+    """Insert a new import log entry."""
+    _ensure_dir()
+    init_import_logs_table()
+    from datetime import datetime
+    conn = sqlite3.connect(str(DB_PATH))
+    conn.execute(
+        """INSERT INTO import_logs (timestamp, source, filename, count, status, details)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), source, filename, count, status, details),
+    )
+    conn.commit()
+    conn.close()
+
+
+def load_import_logs(limit: int = 50) -> list[dict]:
+    """Load import logs, newest first."""
+    _ensure_dir()
+    init_import_logs_table()
+    conn = sqlite3.connect(str(DB_PATH))
+    cursor = conn.execute(
+        "SELECT id, timestamp, source, filename, count, status, details FROM import_logs ORDER BY id DESC LIMIT ?",
+        (limit,),
+    )
+    logs = [
+        {
+            "id": row[0],
+            "timestamp": row[1],
+            "source": row[2],
+            "filename": row[3],
+            "count": row[4],
+            "status": row[5],
+            "details": row[6],
+        }
+        for row in cursor.fetchall()
+    ]
+    conn.close()
+    return logs
+
+
+def clear_import_logs() -> None:
+    """Delete all import log entries."""
+    _ensure_dir()
+    init_import_logs_table()
+    conn = sqlite3.connect(str(DB_PATH))
+    conn.execute("DELETE FROM import_logs")
+    conn.commit()
+    conn.close()
+
+
 def save_stock_list(stocks: list[dict]) -> None:
     """Upsert stock list into SQLite."""
     _ensure_dir()

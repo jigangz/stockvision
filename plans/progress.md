@@ -252,6 +252,32 @@ created: 2026-04-07
 - D3 grouped bars: `x.bandwidth() / 3` for sub-bar width; three loops over CATEGORIES each appending rects
 - Colors: large=red, medium=orange, small=green (lighter shade for negative bars via `color + '88'`)
 
+## 2026-04-08 — P5-4: 数据导入管理 DataSourceSettings
+
+### What was built
+- **`python/data/storage.py`**: Added `import_logs` table. Functions: `init_import_logs_table`, `add_import_log`, `load_import_logs`, `clear_import_logs`.
+- **`python/api/datasource.py`**: New FastAPI router.
+  - `GET /api/datasource/config`: returns saved config or defaults (3 sources: AKShare/Tushare/通达信, sync_time=15:30, auto_sync=True).
+  - `PUT /api/datasource/config`: persists to SQLite config table as JSON.
+  - `POST /api/datasource/test`: tests AKShare (import check), Tushare (token+API call), 通达信 (directory + .day file check).
+  - `POST /api/datasource/import`: auto-detects format from filename extension (.csv/.xlsx/.day/.5/.1), logs to import_logs, returns mock count.
+  - `GET /api/datasource/logs?limit=N`: returns logs newest-first.
+  - `DELETE /api/datasource/logs`: clears all logs.
+- **`src/components/chart/DataSourceSettings.tsx`**: 4-tab modal dialog.
+  - Tab 1 (数据源配置): 3 source cards with drag-sort (HTML5 draggable), enable checkbox, API key/directory inputs, connection test buttons with result display, priority label.
+  - Tab 2 (自动同步): auto_sync toggle + sync_time `<input type="time">` (default 15:30).
+  - Tab 3 (手动导入): drag-drop zone (onDrop → POST /import), quick import buttons for CSV/XLSX/通达信 demo.
+  - Tab 4 (导入日志): table with time/source/filename/count/status/details columns; clear button.
+- **`python/main.py`**: Registered `datasource_router`.
+- **`src/components/chart/ChartContainer.tsx`**: Added "数据源" toolbar button + `showDataSource` state + `<DataSourceSettings />` dialog.
+- **`tests/python/test_datasource.py`**: 27 tests (config CRUD, connection test, import format detection, log CRUD).
+
+### Key patterns learned
+- Reuse existing SQLite config table for datasource config (JSON-encoded value for complex objects)
+- `import_logs` uses AUTOINCREMENT id for stable newest-first ordering with `ORDER BY id DESC`
+- Drag-sort: use `useRef<number | null>` for dragSrcIdx; update state (splice/insert) in `onDragOver` for live visual feedback
+- `<input type="time">` works natively in Tauri WebView; value format is "HH:MM"
+
 ## 2026-04-08 — P2-GATE: Phase 2 Gate
 
 ### Verification

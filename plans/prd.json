@@ -395,8 +395,9 @@
         "Import log table: time/source/count/status/details"
       ],
       "priority": "low",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "completed_at": "2026-04-08",
+      "notes": "datasource.py: GET/PUT /api/datasource/config (SQLite); POST /api/datasource/test (akshare/tushare/tdx); POST /api/datasource/import (format auto-detect, logs to import_logs table); GET+DELETE /api/datasource/logs. DataSourceSettings.tsx: 4-tab dialog (数据源配置/自动同步/手动导入/导入日志); drag-sort priority; AKShare/Tushare API keys + connection test; 通达信 dir input; sync time picker (default 15:30); drag-drop import zone; log table. 27 tests pass (208 total)."
     },
     {
       "id": "P5-GATE",

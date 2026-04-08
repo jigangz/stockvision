@@ -18,6 +18,7 @@ from api.formula import router as formula_router
 from api.screener import router as screener_router
 from api.heatmap import router as heatmap_router
 from api.capital_flow import router as capital_flow_router
+from api.datasource import router as datasource_router
 from data.mock_adapter import MockAdapter
 
 app = FastAPI(title="StockVision API", version="0.1.0")
@@ -44,6 +45,7 @@ app.include_router(formula_router)
 app.include_router(screener_router)
 app.include_router(heatmap_router)
 app.include_router(capital_flow_router)
+app.include_router(datasource_router)
 
 
 @app.get("/api/health")

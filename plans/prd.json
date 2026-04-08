@@ -409,8 +409,9 @@
         "API data source connection and sync works"
       ],
       "priority": "low",
-      "passes": false,
-      "notes": "PHASE GATE: 必须全部通过才能进入 Phase 6"
+      "passes": true,
+      "completed_at": "2026-04-08",
+      "notes": "PHASE GATE: 必须全部通过才能进入 Phase 6. 208/208 tests pass, 0 TypeScript errors. Screener 23 tests, heatmap 17 tests, capital flow 17 tests, datasource 27 tests all pass."
     },
     {
       "id": "P6-1",

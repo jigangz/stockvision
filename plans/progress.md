@@ -278,6 +278,19 @@ created: 2026-04-07
 - Drag-sort: use `useRef<number | null>` for dragSrcIdx; update state (splice/insert) in `onDragOver` for live visual feedback
 - `<input type="time">` works natively in Tauri WebView; value format is "HH:MM"
 
+## 2026-04-08 — P5-GATE: Phase 5 Gate
+
+### Verification
+- TypeScript: 0 errors
+- Python tests: 208/208 passed
+
+### Gate criteria met
+- Screener returns correct filtered results (23 tests) ✓
+- Heatmap renders with correct colors and proportions (17 tests) ✓
+- Data import from CSV and 通达信 files works (27 datasource tests) ✓
+- API data source connection and sync works ✓
+- Capital flow analysis also verified (17 tests) ✓
+
 ## 2026-04-08 — P2-GATE: Phase 2 Gate
 
 ### Verification

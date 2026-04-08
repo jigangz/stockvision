@@ -18,6 +18,8 @@ def get_kline(
     period: str = Query("daily", description="Period: daily, weekly, monthly"),
     start: str = Query("2024-01-01", description="Start date YYYY-MM-DD"),
     end: str = Query("2024-12-31", description="End date YYYY-MM-DD"),
+    limit: int = Query(0, description="If > 0, return only the last N bars (for lazy loading)"),
+    offset: int = Query(0, description="If > 0, skip the last N bars (for loading older data)"),
 ):
     if _adapter is None:
         raise HTTPException(status_code=500, detail="No data adapter configured")
@@ -27,7 +29,21 @@ def get_kline(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    return {"code": code, "market": market, "period": period, "data": [c.to_dict() for c in candles]}
+    total = len(candles)
+    # Apply offset first (skip from end), then limit
+    if offset > 0:
+        candles = candles[: max(0, total - offset)]
+    if limit > 0:
+        candles = candles[-limit:]
+
+    return {
+        "code": code,
+        "market": market,
+        "period": period,
+        "data": [c.to_dict() for c in candles],
+        "total": total,
+        "has_more": (offset + len(candles)) < total if offset > 0 else total > len(candles),
+    }
 
 
 @router.get("/stocks")

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useChartStore } from '@/stores/chartStore';
 
 interface Condition {
@@ -26,6 +26,7 @@ interface ScreenerResponse {
   total: number;
   stocks: StockResult[];
   fields: Record<string, string>;
+  scanned?: number;
 }
 
 const FIELDS = [
@@ -222,6 +223,34 @@ export function StockScreener({ onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<ScreenerResponse | null>(null);
+  // Simulated scan progress (0–100) shown while waiting for backend
+  const [progress, setProgress] = useState(0);
+  const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Animate progress bar while loading
+  useEffect(() => {
+    if (loading) {
+      setProgress(0);
+      progressTimerRef.current = setInterval(() => {
+        setProgress((p) => {
+          // Accelerate to 80% quickly, then slow down (never reaches 100 until done)
+          if (p < 60) return p + 8;
+          if (p < 80) return p + 3;
+          if (p < 92) return p + 1;
+          return p;
+        });
+      }, 120);
+    } else {
+      if (progressTimerRef.current) {
+        clearInterval(progressTimerRef.current);
+        progressTimerRef.current = null;
+      }
+      setProgress(100);
+    }
+    return () => {
+      if (progressTimerRef.current) clearInterval(progressTimerRef.current);
+    };
+  }, [loading]);
 
   const addCondition = () => {
     setConditions((prev) => [...prev, { field: 'close', operator: '>', value: '' }]);
@@ -364,18 +393,38 @@ export function StockScreener({ onClose }: Props) {
             />
           </div>
 
-          {/* Run button + error */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <button style={btnPrimary} onClick={() => void handleFilter()} disabled={loading}>
-              {loading ? '筛选中...' : '开始筛选'}
-            </button>
-            {result && !loading && (
-              <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>
-                共 {result.total} 只股票满足条件
-              </span>
-            )}
-            {error && (
-              <span style={{ color: 'var(--color-up)', fontSize: 11 }}>{error}</span>
+          {/* Run button + progress + error */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button style={btnPrimary} onClick={() => void handleFilter()} disabled={loading}>
+                {loading ? '筛选中...' : '开始筛选'}
+              </button>
+              {result && !loading && (
+                <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>
+                  已扫描 {result.scanned ?? result.total} 只，命中 {result.total} 只
+                </span>
+              )}
+              {error && (
+                <span style={{ color: 'var(--color-up)', fontSize: 11 }}>{error}</span>
+              )}
+            </div>
+            {/* Progress bar — visible while loading or just after completion */}
+            {(loading || progress === 100) && progress > 0 && (
+              <div style={{
+                height: 3,
+                background: 'var(--bg-panel)',
+                borderRadius: 2,
+                overflow: 'hidden',
+                width: '100%',
+              }}>
+                <div style={{
+                  height: '100%',
+                  width: `${progress}%`,
+                  background: loading ? 'var(--color-up)' : 'var(--color-down)',
+                  borderRadius: 2,
+                  transition: 'width 0.12s ease-out, background 0.3s',
+                }} />
+              </div>
             )}
           </div>
 

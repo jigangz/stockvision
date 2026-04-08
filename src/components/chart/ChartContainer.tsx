@@ -31,6 +31,10 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 export function ChartContainer(): React.ReactElement {
   const candles = useDataStore((s) => s.candles);
   const fetchKline = useDataStore((s) => s.fetchKline);
+  const fetchKlineInitial = useDataStore((s) => s.fetchKlineInitial);
+  const fetchMoreBars = useDataStore((s) => s.fetchMoreBars);
+  const allLoaded = useDataStore((s) => s.allLoaded);
+  const loadingMore = useDataStore((s) => s.loadingMore);
   const currentCode = useChartStore((s) => s.currentCode);
   const currentMarket = useChartStore((s) => s.currentMarket);
   const currentPeriod = useChartStore((s) => s.currentPeriod);
@@ -70,12 +74,13 @@ export function ChartContainer(): React.ReactElement {
     return d.toISOString().slice(0, 10);
   }, [displayDays]);
 
-  // Fetch data on mount and when code/period/displayDays changes
+  // Initial load: show last 100 bars immediately for fast first paint
   useEffect(() => {
     const start = getStartDate();
     const end = new Date().toISOString().slice(0, 10);
-    void fetchKline(currentCode, currentMarket, currentPeriod, start, end);
-  }, [currentCode, currentMarket, currentPeriod, displayDays, fetchKline, getStartDate]);
+    void fetchKlineInitial(currentCode, currentMarket, currentPeriod, start, end);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentCode, currentMarket, currentPeriod, displayDays]);
 
   // Auto-load drawings when stock or period changes
   useEffect(() => {
@@ -106,6 +111,27 @@ export function ChartContainer(): React.ReactElement {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [candles]);
+
+  // Lazy load: when user scrolls near the left edge, fetch older bars
+  useEffect(() => {
+    const kChart = klineRef.current?.chart;
+    if (!kChart || !candles.length) return;
+
+    const lazyHandler = () => {
+      const range = kChart.timeScale().getVisibleLogicalRange();
+      if (!range) return;
+      // Trigger when fewer than 20 bars remain to the left of the visible area
+      if (range.from <= 20 && !allLoaded && !loadingMore) {
+        void fetchMoreBars();
+      }
+    };
+
+    kChart.timeScale().subscribeVisibleLogicalRangeChange(lazyHandler);
+    return () => {
+      kChart.timeScale().unsubscribeVisibleLogicalRangeChange(lazyHandler);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [candles, allLoaded, loadingMore]);
 
   // Set drawing chart/series refs once charts are mounted (candles trigger mount)
   useEffect(() => {

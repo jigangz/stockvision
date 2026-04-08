@@ -181,6 +181,7 @@ def filter_stocks(req: ScreenerRequest) -> dict:
 
     return {
         "total": len(results),
+        "scanned": len(stocks),
         "stocks": clean,
         "fields": FIELDS,
     }

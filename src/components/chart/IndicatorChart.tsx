@@ -12,6 +12,10 @@ import type { OhlcvData } from '@/stores/dataStore';
 import { useIndicatorStore, type IndicatorSeries } from '@/stores/indicatorStore';
 import { darkChartOptions } from '@/theme/darkTheme';
 
+type WorkerMessage =
+  | { type: 'result'; data: { indicator: string; series: IndicatorSeries[] } }
+  | { type: 'error'; message: string };
+
 export interface IndicatorChartHandle {
   chart: IChartApi | null;
   histSeries: ISeriesApi<'Histogram'> | null;
@@ -45,13 +49,15 @@ export const IndicatorChart = forwardRef<IndicatorChartHandle, IndicatorChartPro
     const firstHistRef = useRef<ISeriesApi<'Histogram'> | null>(null);
     // Formula overlay series
     const formulaSeriesRefs = useRef<ISeriesApi<'Line'>[]>([]);
+    // Web Worker for off-main-thread indicator calculations
+    const workerRef = useRef<Worker | null>(null);
 
     useImperativeHandle(ref, () => ({
       get chart() { return chartRef.current; },
       get histSeries() { return firstHistRef.current; },
     }));
 
-    // Create chart once
+    // Create chart once + spawn Web Worker
     useEffect(() => {
       const el = containerRef.current;
       if (!el) return;
@@ -65,18 +71,28 @@ export const IndicatorChart = forwardRef<IndicatorChartHandle, IndicatorChartPro
 
       chartRef.current = chart;
 
+      // Spawn indicator worker
+      workerRef.current = new Worker(
+        new URL('../../workers/indicator.worker.ts', import.meta.url),
+        { type: 'module' },
+      );
+
       return () => {
         chart.remove();
         chartRef.current = null;
         seriesRefs.current = [];
         firstHistRef.current = null;
+        workerRef.current?.terminate();
+        workerRef.current = null;
       };
     }, []);
 
-    // Fetch indicator data when indicator or candles change
+    // Fetch indicator data via Web Worker when indicator or candles change
     useEffect(() => {
       if (!candles.length) return;
       if (!chartRef.current) return;
+      const worker = workerRef.current;
+      if (!worker) return;
 
       setLoading(true);
       setError(null);
@@ -90,25 +106,20 @@ export const IndicatorChart = forwardRef<IndicatorChartHandle, IndicatorChartPro
         volume: c.volume,
       }));
 
-      fetch('http://localhost:8899/api/indicators/calculate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: candleData, indicator: activeIndicator }),
-      })
-        .then((r) => {
-          if (!r.ok) throw new Error(`HTTP ${r.status}`);
-          return r.json() as Promise<{ indicator: string; series: IndicatorSeries[] }>;
-        })
-        .then((result) => {
-          setIndicatorData(result);
+      // One-shot message handler for this request
+      const handleMessage = (e: MessageEvent<WorkerMessage>) => {
+        worker.removeEventListener('message', handleMessage);
+        if (e.data.type === 'result') {
+          setIndicatorData(e.data.data);
           setLoading(false);
-          renderSeries(result.series);
-        })
-        .catch((err: unknown) => {
-          const msg = err instanceof Error ? err.message : String(err);
-          setError(msg);
+          renderSeries(e.data.data.series);
+        } else {
+          setError(e.data.message);
           setLoading(false);
-        });
+        }
+      };
+      worker.addEventListener('message', handleMessage);
+      worker.postMessage({ candles: candleData, indicator: activeIndicator });
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeIndicator, candles]);
 

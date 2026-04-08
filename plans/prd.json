@@ -485,8 +485,9 @@
         "First screen: show latest 100 bars, lazy load rest"
       ],
       "priority": "low",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "completed_at": "2026-04-08",
+      "notes": "kline API: limit+offset params for lazy loading (last 100 bars initial, fetch more on scroll-left). Indicator Web Worker: src/workers/indicator.worker.ts offloads POST /api/indicators/calculate off main thread. Screener progress bar: animated 0→100% with CSS transition. Parquet: read_parquet_pyarrow + load_candles_pyarrow in storage.py using pyarrow.parquet directly. LW Charts handles virtual scrolling natively. 240/240 tests pass."
     },
     {
       "id": "P6-GATE",

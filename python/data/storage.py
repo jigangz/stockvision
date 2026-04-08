@@ -76,6 +76,40 @@ def load_candles(code: str, market: str, period: str) -> list[Candle] | None:
     ]
 
 
+def read_parquet_pyarrow(path: str) -> list[dict]:
+    """Read a Parquet file using pyarrow directly (faster than pandas for large files).
+
+    Returns a list of row dicts. Use this instead of pandas.read_parquet() for
+    performance-critical reads of >5000-bar market data files.
+    """
+    import pyarrow.parquet as pq  # pyarrow is in requirements.txt
+    table = pq.read_table(path)
+    return table.to_pylist()
+
+
+def load_candles_pyarrow(code: str, market: str, period: str) -> list[Candle] | None:
+    """Load candles from a parquet file using pyarrow (not pandas). Returns None if missing."""
+    filename = f"{market}_{code}_{period}.parquet"
+    filepath = DATA_DIR / filename
+
+    if not filepath.exists():
+        return None
+
+    rows = read_parquet_pyarrow(str(filepath))
+    return [
+        Candle(
+            date=str(row["date"]),
+            open=float(row["open"]),
+            high=float(row["high"]),
+            low=float(row["low"]),
+            close=float(row["close"]),
+            volume=float(row["volume"]),
+            amount=float(row.get("amount") or 0),
+        )
+        for row in rows
+    ]
+
+
 def init_config_table() -> None:
     """Initialize SQLite config table."""
     _ensure_dir()

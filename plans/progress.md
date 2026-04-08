@@ -353,6 +353,24 @@ created: 2026-04-07
 - PyInstaller `console=False` prevents a CMD window from flashing on sidecar start
 - Missing sidecar binary is expected during `npm run tauri dev` (backend started separately) — must not panic
 
+## 2026-04-08 — P6-5: 性能优化
+
+### What was built
+- **kline API `limit`/`offset` params**: `GET /api/data/kline?limit=N&offset=M`. Returns last N bars (offset from end). Response includes `total` and `has_more` fields. Initial UI load uses `limit=100` for fast first paint.
+- **`read_parquet_pyarrow` + `load_candles_pyarrow`** in `storage.py`: Reads Parquet files using `pyarrow.parquet` directly instead of pandas `read_parquet`. Faster for large files (avoids pandas DataFrame overhead).
+- **`src/workers/indicator.worker.ts`**: Dedicated Web Worker that calls `POST /api/indicators/calculate` off the main thread. Removes main-thread blocking during indicator computation.
+- **IndicatorChart.tsx**: Spawns the worker on mount, uses one-shot `addEventListener('message', handler)` pattern for each calculation request.
+- **dataStore.ts**: Added `fetchKlineInitial` (initial 100 bars), `fetchMoreBars` (prepend older bars), `allLoaded`, `loadingMore` state. Lazy loading triggered when user scrolls near left edge.
+- **ChartContainer.tsx**: Uses `fetchKlineInitial` on stock/period change. `subscribeVisibleLogicalRangeChange` triggers `fetchMoreBars` when `range.from <= 20`.
+- **StockScreener.tsx**: Animated progress bar (CSS width transition) driven by `setInterval` while loading. Screener response now includes `scanned` count.
+- **`tests/python/test_performance.py`**: 12 new tests for limit/offset, pyarrow, and screener scanned field.
+
+### Key patterns learned
+- LW Charts virtualizes rendering natively — no explicit virtual scroll needed; key is lazy-loading data
+- Web Worker in Vite: `new Worker(new URL('...', import.meta.url), {type: 'module'})` — Vite bundles the worker automatically
+- One-shot message handler: `addEventListener` + `removeEventListener` in the handler itself prevents stale closures from accumulating
+- pyarrow `pq.read_table(path).to_pylist()` returns list of dicts directly — no pandas needed
+
 ## 2026-04-08 — P2-GATE: Phase 2 Gate
 
 ### Verification

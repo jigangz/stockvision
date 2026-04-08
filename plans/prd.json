@@ -207,8 +207,9 @@
         "Drawing works in future blank area and top blank area"
       ],
       "priority": "medium",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "completed_at": "2026-04-08",
+      "notes": "drawingStore.ts: Drawing/DrawingPoint types + Zustand store. DrawingCanvas.tsx: absolute canvas overlay, price-time coord conversion (timeToCoordinate/priceToCoordinate), ResizeObserver + subscribeVisibleLogicalRangeChange for redraws, mouse handlers for 1/2-point tools. ChartContainer wires up DrawingCanvas with state-driven chart/series refs."
     },
     {
       "id": "P3-2",

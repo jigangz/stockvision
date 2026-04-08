@@ -57,6 +57,19 @@ created: 2026-04-07
 - TickList uses recent candles as proxy for real tick data (acceptable for Phase 2 scope)
 - Collapse/expand managed with local `useState` in InfoPanel — no need for global store
 
+## 2026-04-08 — P3-1: 画线引擎架构
+
+### What was built
+- **`drawingStore.ts`**: Zustand store with `Drawing`/`DrawingPoint`/`DrawingStyle` types. Drawings stored as `{time: number (UTCTimestamp), price: number}`. `activeTool`, `activeStyle`, `pendingPoints`, `commitDrawing`, `removeDrawing`, `clearAll`.
+- **`DrawingCanvas.tsx`**: `<canvas>` with `position: absolute` overlaying the K-line chart area. Reads chart/series from props. Coordinate conversion: `chart.timeScale().timeToCoordinate(time as Time)` / `series.priceToCoordinate(price)` for rendering; `coordinateToTime`/`coordinateToPrice` for mouse → point. Subscribes to `subscribeVisibleLogicalRangeChange` + `ResizeObserver` for redraws on scroll/zoom/resize. Mouse handlers: 1-click for horizontal/vertical, 2-click for trendline/ray/segment/rectangle. Preview line rendered while placing second point.
+- **`ChartContainer.tsx`**: Imports `DrawingCanvas`, adds `drawingChart`/`drawingSeries` state derived from `candles` (ensures charts are mounted), passes to `DrawingCanvas`.
+
+### Key patterns learned
+- Pass chart/series as state (not refs) to `DrawingCanvas` — use `useState` updated in a `useEffect([candles])` to ensure refs are populated after chart mounts
+- Store drawings as `UTCTimestamp` (number), cast to `Time` when calling LW Charts API
+- Canvas sizing: compare `getBoundingClientRect()` dims to `canvas.width/height` each redraw; reset to 0 to force full resize on ResizeObserver fire
+- Future blank area works automatically — LW Charts time scale extrapolates beyond last data point
+
 ## 2026-04-08 — P2-GATE: Phase 2 Gate
 
 ### Verification

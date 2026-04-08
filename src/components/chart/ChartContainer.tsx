@@ -1,5 +1,6 @@
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 import type { IChartApi, ISeriesApi, SeriesType } from 'lightweight-charts';
+// DrawingCanvas chart/series refs are derived from candles to ensure charts are mounted
 import { KLineChart, type KLineChartHandle } from '@/components/chart/KLineChart';
 import { VolumeChart, type VolumeChartHandle } from '@/components/chart/VolumeChart';
 import { IndicatorChart, type IndicatorChartHandle } from '@/components/chart/IndicatorChart';
@@ -7,6 +8,7 @@ import { Crosshair } from '@/components/chart/Crosshair';
 import { InfoTooltip } from '@/components/chart/InfoTooltip';
 import { ChartSettingsDialog } from '@/components/chart/ChartSettingsDialog';
 import { PriceScaleDialog } from '@/components/chart/PriceScaleDialog';
+import { DrawingCanvas } from '@/components/chart/DrawingCanvas';
 import { useDataStore } from '@/stores/dataStore';
 import { useChartStore } from '@/stores/chartStore';
 import { useCrosshairStore } from '@/stores/crosshairStore';
@@ -27,6 +29,8 @@ export function ChartContainer(): React.ReactElement {
 
   const [showSettings, setShowSettings] = useState(false);
   const [showPriceScale, setShowPriceScale] = useState(false);
+  const [drawingChart, setDrawingChart] = useState<IChartApi | null>(null);
+  const [drawingSeries, setDrawingSeries] = useState<ISeriesApi<SeriesType> | null>(null);
 
   const klineRef = useRef<KLineChartHandle>(null);
   const volumeRef = useRef<VolumeChartHandle>(null);
@@ -74,6 +78,15 @@ export function ChartContainer(): React.ReactElement {
       if (rightOffsetSaveTimer.current) clearTimeout(rightOffsetSaveTimer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [candles]);
+
+  // Set drawing chart/series refs once charts are mounted (candles trigger mount)
+  useEffect(() => {
+    if (candles.length > 0) {
+      setDrawingChart(klineRef.current?.chart ?? null);
+      setDrawingSeries(klineRef.current?.candleSeries ?? null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [candles]);
 
   // Build chart entries for crosshair sync (memoize to avoid re-subscriptions)
@@ -191,6 +204,7 @@ export function ChartContainer(): React.ReactElement {
       {/* K-Line area */}
       <div style={chartAreaStyle('0 0 55%')}>
         <KLineChart ref={klineRef} />
+        <DrawingCanvas chart={drawingChart} series={drawingSeries} />
         <Crosshair chartArea="kline" />
         <InfoTooltip />
       </div>

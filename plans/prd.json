@@ -423,8 +423,9 @@
         "POST /api/backtest/run returns correct results"
       ],
       "priority": "low",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "completed_at": "2026-04-08",
+      "notes": "backtest_engine.py: BacktestEngine class (long-only, formula buy/sell via formula_engine, equity curve, all 7 metrics). POST /api/backtest/run endpoint. 20 tests pass (228 total)."
     },
     {
       "id": "P6-2",
@@ -436,8 +437,9 @@
         "Trade records table: time/direction/price/shares/pnl"
       ],
       "priority": "low",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "completed_at": "2026-04-08",
+      "notes": "BacktestResult.tsx: formula input form, 7 stat cards, D3 K-line with B/S markers (red up/green down arrows), D3 equity curve vs benchmark, trade records table. ChartContainer: 回测 toolbar button. 0 TS errors, 228/228 tests pass."
     },
     {
       "id": "P6-3",

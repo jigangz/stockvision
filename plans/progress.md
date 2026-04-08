@@ -291,6 +291,39 @@ created: 2026-04-07
 - API data source connection and sync works ✓
 - Capital flow analysis also verified (17 tests) ✓
 
+## 2026-04-08 — P6-1: 回测引擎 backtest_engine.py
+
+### What was built
+- **`python/data/backtest_engine.py`**: `BacktestEngine` class. Accepts candle dicts + buy/sell formulas + initial_capital. Evaluates signals via `formula_engine.evaluate_formula`. Long-only simulation (buy at close on signal, sell at close on signal). Outputs all 7 required metrics: totalReturn/maxDrawdown/winRate/profitFactor/sharpe/tradeCount/avgHoldDays + equityCurve + trades list.
+- **`python/api/backtest.py`**: FastAPI router `POST /api/backtest/run`. Accepts code/market/period/start/end/buy_formula/sell_formula/initial_capital/commission_rate. Returns metrics + barCount + code/market echo.
+- **`python/main.py`**: Registered `backtest_router`.
+- **`tests/python/test_backtest.py`**: 20 tests (10 unit + 10 API). 228/228 total tests pass.
+
+### Key patterns learned
+- Formula engine returns `[{data: [{date, value}]}]` — use first series, last value for signal
+- Buy signal at bar i means entry at close[i]; sell signal at bar i means exit at close[i], only if i > entry_idx
+- Equity curve = mark-to-market each bar (capital × close/entry_price when in position)
+- Sharpe = mean_daily_return / std_daily_return × sqrt(252)
+- MaxDrawdown iterates equity curve tracking rolling peak, returns max (peak-equity)/peak × 100
+
+## 2026-04-08 — P6-2: 回测可视化 BacktestResult
+
+### What was built
+- **`src/components/chart/BacktestResult.tsx`**: Full-featured backtest result dialog.
+  - Formula input form: buy/sell formula textareas + initial capital input + "开始回测" button
+  - Stat cards row: totalReturn (red/green), maxDrawdown, winRate, Sharpe, tradeCount, avgHoldDays, profitFactor
+  - K-line chart (D3, last 120 bars): candlesticks with buy marks (red up-triangle + "B") and sell marks (green down-triangle + "S") overlay
+  - Equity curve chart (D3): strategy line (red/green) vs flat benchmark (white dashed)
+  - Trade records table: scrollable, entry/exit date, entry/exit price, pnl%, hold_bars, direction
+- **`ChartContainer.tsx`**: Added "回测" toolbar button + `showBacktest` state + `<BacktestResult />` dialog
+
+### Key patterns learned
+- D3 inside React: always call `svg.selectAll('*').remove()` at start of useEffect, use `svgRef.current.clientWidth` for responsive sizing
+- Buy arrow (up-pointing triangle): `polygon points="${x},${y-10} ${x-5},${y} ${x+5},${y}"` below candle low
+- Sell arrow (down-pointing triangle): `polygon points="${x},${y+10} ${x-5},${y} ${x+5},${y}"` above candle high
+- Map trade dates to bar indices via `new Map(visible.map((c,i) => [c.date, i]))` for O(1) lookup
+- Candle date conversion: time is unix timestamp → `new Date(c.time * 1000).toISOString().slice(0,10)`
+
 ## 2026-04-08 — P2-GATE: Phase 2 Gate
 
 ### Verification

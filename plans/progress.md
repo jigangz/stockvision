@@ -208,6 +208,20 @@ created: 2026-04-07
 - Interval stats return correct calculations (13 stats tests) ✓
 - No Python backend errors ✓
 
+## 2026-04-08 — P5-1: 选股筛选器 StockScreener
+
+### What was built
+- **`python/api/screener.py`**: `POST /api/screener/filter` — accepts conditions list `[{field, operator, value}]` (AND logic), optional formula string, sort_by, sort_desc, limit. For each mock stock, generates last 60 days of data via MockAdapter, computes close/open/high/low/volume/amount/change_pct/amplitude for the last day, then applies conditions. Formula evaluated via formula_engine; stock passes if last value is non-zero. `GET /api/screener/fields` returns metadata. Registered in `main.py`.
+- **`src/components/chart/StockScreener.tsx`**: Modal dialog with (1) condition builder — field selector + operator selector + value input, add/remove buttons; (2) formula textarea for formula-based conditions; (3) "开始筛选" button; (4) sortable results table (8 columns) with click-to-sort; (5) click row sets chartStore code+market and closes dialog. All colors via CSS vars.
+- **`src/components/chart/ChartContainer.tsx`**: Added "选股" toolbar button + `showScreener` state.
+- **`tests/python/test_screener.py`**: 23 tests — structure validation, field filtering, all 6 operators, multiple AND conditions, sorting, limit, formula screening, error cases.
+
+### Key patterns learned
+- Screener generates metrics for all stocks on-demand (no pre-computed cache) — MockAdapter is fast enough for 8 stocks
+- Formula screening: call `evaluate_formula(formula, candles)`, check last value of first output series is non-zero
+- Internal `_candles` field excluded from API response by filtering keys starting with `_`
+- Click-to-jump: `useChartStore.setCode(stock.code)` + `setMarket(stock.market)` then `onClose()` — ChartContainer's useEffect fires automatically
+
 ## 2026-04-08 — P2-GATE: Phase 2 Gate
 
 ### Verification

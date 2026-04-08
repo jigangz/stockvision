@@ -544,8 +544,9 @@
         "在 useKeyboardShortcuts.ts 中实现"
       ],
       "priority": "high",
-      "passes": false,
-      "notes": "Audit 发现部分快捷键缺失"
+      "passes": true,
+      "completed_at": "2026-04-08",
+      "notes": "All shortcuts already implemented in useKeyboardShortcuts.ts (lines 113-247): Ctrl+Z undoes last drawing, Delete removes selectedId, PageUp/Down zoom via setVisibleLogicalRange, Home/End jump to earliest/latest. 0 TS errors, 253/253 tests pass."
     },
     {
       "id": "FIX-4",

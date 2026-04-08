@@ -434,14 +434,24 @@ EOF
 
   # Check for completion promise (only in last 10 lines to avoid false positives from mentions in text)
   if tail -10 "$OUTPUT_FILE" | grep -qE "^[[:space:]]*<promise>COMPLETE</promise>"; then
-    echo ""
-    echo "=============================================="
-    echo "Completion promise detected!"
-    echo "All tasks complete."
-    echo "=============================================="
-    update_status "complete" "$TASK_ID" "$TASK_TITLE"
-    rm -f "$STATE_FILE"
-    exit 0
+    # Double-check: verify ALL tasks actually pass in prd.json
+    REMAINING=$(jq '[.features[] | select(.passes == false and (.skip // false) == false)] | length' "$PRD_FILE" 2>/dev/null || echo "999")
+    if [ "$REMAINING" -eq 0 ]; then
+      echo ""
+      echo "=============================================="
+      echo "Completion promise detected!"
+      echo "All tasks complete ($REMAINING remaining)."
+      echo "=============================================="
+      update_status "complete" "$TASK_ID" "$TASK_TITLE"
+      rm -f "$STATE_FILE"
+      exit 0
+    else
+      echo ""
+      echo "=============================================="
+      echo "WARNING: COMPLETE promise detected but $REMAINING tasks still pending!"
+      echo "Ignoring false completion — continuing loop."
+      echo "=============================================="
+    fi
   fi
 
   # Run verification

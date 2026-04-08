@@ -455,8 +455,9 @@
         "Delete: remove selected drawing"
       ],
       "priority": "low",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "completed_at": "2026-04-08",
+      "notes": "useKeyboardShortcuts.ts hook: F5/F10/arrows/PageUp/PageDown/Home/End/Enter/Esc/Ctrl+Z/Delete. StockCodeInput.tsx dialog for code jump. 0 TS errors, 228/228 tests pass."
     },
     {
       "id": "P6-4",

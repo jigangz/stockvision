@@ -324,6 +324,19 @@ created: 2026-04-07
 - Map trade dates to bar indices via `new Map(visible.map((c,i) => [c.date, i]))` for O(1) lookup
 - Candle date conversion: time is unix timestamp → `new Date(c.time * 1000).toISOString().slice(0,10)`
 
+## 2026-04-08 — P6-3: 快捷键系统
+
+### What was built
+- **`src/hooks/useKeyboardShortcuts.ts`**: Single hook that attaches one global `keydown` listener. Uses stable ref pattern (`optsRef`) so options update without re-attaching the listener. All shortcuts handled: F5 (refresh), F10 (stock info/interval stats), ArrowLeft/Right (move crosshair), ArrowUp/Down (switch stock from STOCK_LIST), PageUp/Down (zoom in/out via setVisibleLogicalRange), Home/End (jump earliest/latest), Enter (open StockCodeInput), Esc (cancel drawing pending/activeTool first, then close topmost dialog), Ctrl+Z (undo last drawing), Delete (remove selectedId drawing).
+- **`src/components/chart/StockCodeInput.tsx`**: Minimal modal dialog for Enter key stock code jump. Code input + SH/SZ market toggle + confirm/cancel buttons.
+- **`src/components/chart/ChartContainer.tsx`**: Removed old ArrowLeft/Right handler; added `useKeyboardShortcuts` call. Added `showCodeInput` state, `anyDialogOpen` computed, `closeTopDialog` callback (ordered priority), `handleRefresh` callback.
+
+### Key patterns learned
+- Use optsRef pattern for keyboard handlers that need latest state: `useEffect([]` + ref updated each render
+- Don't intercept keys when `target.tagName === 'INPUT' || 'TEXTAREA'` — except Esc (allow canceling drawing even from inputs)
+- PageUp/Down zoom: scale visible range by 0.7/1.4 around center point via `setVisibleLogicalRange`
+- Home/End: keep same size range, shift `from/to` to start/end of data
+
 ## 2026-04-08 — P2-GATE: Phase 2 Gate
 
 ### Verification

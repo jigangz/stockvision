@@ -529,8 +529,9 @@
         "所有测试通过"
       ],
       "priority": "high",
-      "passes": false,
-      "notes": "Audit 发现 /api/data/sync 缺失，/api/data/import 在 datasource router 下"
+      "passes": true,
+      "completed_at": "2026-04-08",
+      "notes": "POST /api/data/sync added to data.py (returns ok+synced+period+message). POST /api/data/import added as alias to datasource.manual_import. 13 new tests in test_data_sync_import.py. 253/253 tests pass."
     },
     {
       "id": "FIX-3",

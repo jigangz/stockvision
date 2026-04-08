@@ -1,8 +1,6 @@
 import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import {
   createChart,
-  HistogramSeries,
-  LineSeries,
   type IChartApi,
   type ISeriesApi,
   type HistogramData,
@@ -76,20 +74,20 @@ export const VolumeChart = forwardRef<VolumeChartHandle, VolumeChartProps>(
         },
       });
 
-      const volumeSeries = chart.addSeries(HistogramSeries, {
+      const volumeSeries = chart.addHistogramSeries({
         priceLineVisible: false,
         lastValueVisible: false,
         priceFormat: { type: 'volume' },
       });
 
-      const ma5 = chart.addSeries(LineSeries, {
+      const ma5 = chart.addLineSeries({
         color: '#FFFF00',
         lineWidth: 1,
         priceLineVisible: false,
         lastValueVisible: false,
       });
 
-      const ma10 = chart.addSeries(LineSeries, {
+      const ma10 = chart.addLineSeries({
         color: '#FF00FF',
         lineWidth: 1,
         priceLineVisible: false,

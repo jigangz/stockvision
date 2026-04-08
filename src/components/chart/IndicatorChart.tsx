@@ -1,8 +1,6 @@
 import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import {
   createChart,
-  HistogramSeries,
-  LineSeries,
   type IChartApi,
   type ISeriesApi,
   type HistogramData,
@@ -111,19 +109,19 @@ export const IndicatorChart = forwardRef<IndicatorChartHandle, IndicatorChartPro
         },
       });
 
-      const histSeries = chart.addSeries(HistogramSeries, {
+      const histSeries = chart.addHistogramSeries({
         priceLineVisible: false,
         lastValueVisible: false,
       });
 
-      const difSeries = chart.addSeries(LineSeries, {
+      const difSeries = chart.addLineSeries({
         color: '#FFFFFF',
         lineWidth: 1,
         priceLineVisible: false,
         lastValueVisible: false,
       });
 
-      const deaSeries = chart.addSeries(LineSeries, {
+      const deaSeries = chart.addLineSeries({
         color: '#FFFF00',
         lineWidth: 1,
         priceLineVisible: false,

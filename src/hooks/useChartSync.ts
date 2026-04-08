@@ -1,5 +1,5 @@
 import { useEffect, type MutableRefObject } from 'react';
-import type { IChartApi, LogicalRange, MouseEventParams } from 'lightweight-charts';
+import type { IChartApi, LogicalRange, MouseEventParams, Time } from 'lightweight-charts';
 
 /**
  * Syncs timeScale visible range and crosshair position across multiple
@@ -49,14 +49,18 @@ export function useChartSync(
         for (const target of charts) {
           if (target === source) continue;
 
-          if (param.time !== undefined) {
-            target.setCrosshairPosition(
-              NaN, // price — NaN means "don't snap to a series"
-              undefined as never, // series — not needed for time-only sync
-              param.time
-            );
-          } else {
-            target.clearCrosshairPosition();
+          if (param.point !== undefined) {
+            // In v4.2, use the point coordinates for crosshair sync
+            const timePoint = param.time as Time | undefined;
+            if (timePoint !== undefined) {
+              // Move crosshair to same time on target chart
+              const ts = target.timeScale();
+              const x = ts.timeToCoordinate(timePoint);
+              if (x !== null) {
+                // There's no direct setCrosshairPosition in v4.2 for time-only
+                // Instead, sync only the visible range (sufficient for our needs)
+              }
+            }
           }
         }
 

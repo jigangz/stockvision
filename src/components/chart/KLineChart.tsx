@@ -1,8 +1,6 @@
 import { useEffect, useRef, useCallback, type MutableRefObject } from 'react';
 import {
   createChart,
-  CandlestickSeries,
-  LineSeries,
   type IChartApi,
   type ISeriesApi,
   type CandlestickData,
@@ -68,7 +66,7 @@ export function KLineChart({ width, height, chartRef: externalChartRef }: KLineC
       autoSize: !width && !height,
     });
 
-    const candleSeries = chart.addSeries(CandlestickSeries, {
+    const candleSeries = chart.addCandlestickSeries({
       upColor: candleColors.upColor,
       downColor: candleColors.downColor,
       wickUpColor: candleColors.wickUpColor,
@@ -76,25 +74,25 @@ export function KLineChart({ width, height, chartRef: externalChartRef }: KLineC
       borderVisible: false,
     });
 
-    const ma5 = chart.addSeries(LineSeries, {
+    const ma5 = chart.addLineSeries({
       color: maColors.ma5,
       lineWidth: 1,
       priceLineVisible: false,
       lastValueVisible: false,
     });
-    const ma10 = chart.addSeries(LineSeries, {
+    const ma10 = chart.addLineSeries({
       color: maColors.ma10,
       lineWidth: 1,
       priceLineVisible: false,
       lastValueVisible: false,
     });
-    const ma20 = chart.addSeries(LineSeries, {
+    const ma20 = chart.addLineSeries({
       color: maColors.ma20,
       lineWidth: 1,
       priceLineVisible: false,
       lastValueVisible: false,
     });
-    const ma60 = chart.addSeries(LineSeries, {
+    const ma60 = chart.addLineSeries({
       color: maColors.ma60,
       lineWidth: 1,
       priceLineVisible: false,

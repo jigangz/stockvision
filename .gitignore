@@ -1,7 +1,8 @@
 node_modules/
 dist/
 target/
-data/
+/data/
+python/data_store/
 __pycache__/
 *.pyc
 .env

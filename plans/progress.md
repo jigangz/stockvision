@@ -194,6 +194,20 @@ created: 2026-04-07
 - Monaco `editor.updateOptions({language:})` is not valid; use `monaco.editor.setModelLanguage(editor.getModel(), ...)` instead
 - Formula results overlay works as additional LineSeries added/removed on the existing IndicatorChart instance via `formulaOverlay` prop
 
+## 2026-04-08 — P4-GATE: Phase 4 Gate
+
+### Verification
+- TypeScript: 0 errors
+- Python tests: 124/124 passed
+- All P4 tasks (P4-1 through P4-3) confirmed passing
+
+### Gate criteria met
+- All 22 indicators compute correctly (MACD/DMA/DMI/TRIX/FSL/EMV/RSI/KDJ/WR/CCI/ROC/MTM/PSY/VOL/OBV/VR/ASI/BOLL/SAR/BRAR/CR/MOST) ✓
+- Indicator values verified against test data (56 indicator tests) ✓
+- Formula engine parses and evaluates 通达信 formulas (35 formula tests) ✓
+- Interval stats return correct calculations (13 stats tests) ✓
+- No Python backend errors ✓
+
 ## 2026-04-08 — P2-GATE: Phase 2 Gate
 
 ### Verification

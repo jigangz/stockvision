@@ -4,7 +4,7 @@ const navStyles: Record<string, React.CSSProperties> = {
   nav: {
     display: 'flex',
     alignItems: 'center',
-    height: 40,
+    height: 60,
     padding: '0 12px',
     background: 'var(--bg-secondary)',
     borderBottom: '1px solid var(--border)',

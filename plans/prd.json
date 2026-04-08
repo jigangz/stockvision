@@ -556,8 +556,9 @@
         "不影响整体布局比例"
       ],
       "priority": "low",
-      "passes": false,
-      "notes": "Audit 发现 TopNav 是 40px 而非 spec 的 60px"
+      "passes": true,
+      "completed_at": "2026-04-08",
+      "notes": "TopNav.tsx line 7: height changed from 40 to 60. 0 TS errors, 253/253 tests pass."
     },
     {
       "id": "FIX-GATE",
@@ -570,8 +571,9 @@
         "/api/data/sync 和 /api/data/import 可调用"
       ],
       "priority": "high",
-      "passes": false,
-      "notes": "修复轮 Gate"
+      "passes": true,
+      "completed_at": "2026-04-08",
+      "notes": "修复轮 Gate: FIX-1 (20+ drawing tools), FIX-2 (sync/import endpoints), FIX-3 (keyboard shortcuts), FIX-4 (TopNav 60px) all pass. 0 TS errors, 253/253 tests pass."
     }
   ]
 }

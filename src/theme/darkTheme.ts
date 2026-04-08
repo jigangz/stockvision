@@ -14,6 +14,21 @@ export const darkChartOptions: DeepPartial<ChartOptions> = {
   timeScale: {
     borderColor: '#333333',
     rightOffset: 30,
+    minBarSpacing: 2,
+  },
+  handleScroll: {
+    mouseWheel: true,
+    pressedMouseMove: true,
+    horzTouchDrag: true,
+    vertTouchDrag: false,
+  },
+  handleScale: {
+    mouseWheel: true,
+    pinch: true,
+    axisPressedMouseMove: {
+      time: true,
+      price: false,
+    },
   },
 };
 

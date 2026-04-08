@@ -1,0 +1,63 @@
+.tooltip {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 20;
+  background: rgba(30, 0, 0, 0.9);
+  border: 1px solid #FF4444;
+  border-radius: 4px;
+  padding: 8px 12px;
+  min-width: 180px;
+  pointer-events: none;
+  font-family: 'Consolas', 'Microsoft YaHei', monospace;
+  font-size: 12px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #333;
+}
+
+.symbol {
+  color: #FFFFFF;
+  font-weight: bold;
+}
+
+.time {
+  color: #999999;
+}
+
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.label {
+  color: #999999;
+}
+
+.up {
+  color: #FF4444;
+}
+
+.down {
+  color: #00CC66;
+}
+
+.flat {
+  color: #CCCCCC;
+}
+
+.neutral {
+  color: #CCCCCC;
+}

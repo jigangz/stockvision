@@ -1,0 +1,48 @@
+.crosshairOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.verticalLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #888888;
+  opacity: 0.6;
+}
+
+.horizontalLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #888888;
+  opacity: 0.6;
+}
+
+.priceLabel {
+  position: absolute;
+  background: #FF4444;
+  color: #FFFFFF;
+  font-size: 11px;
+  padding: 2px 6px;
+  white-space: nowrap;
+  font-family: 'Consolas', monospace;
+}
+
+.timeLabel {
+  position: absolute;
+  bottom: 0;
+  background: #333333;
+  color: #FFFFFF;
+  font-size: 11px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  font-family: 'Consolas', monospace;
+}

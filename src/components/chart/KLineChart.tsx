@@ -1,4 +1,4 @@
-import { useEffect, useRef, type MutableRefObject } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import {
   createChart,
   type IChartApi,
@@ -10,8 +10,9 @@ import {
 import { useDataStore, type OhlcvData } from '@/stores/dataStore';
 import { darkChartOptions, candleColors, maColors } from '@/theme/darkTheme';
 
-interface KLineChartProps {
-  chartRef?: MutableRefObject<IChartApi | null>;
+export interface KLineChartHandle {
+  chart: IChartApi | null;
+  candleSeries: ISeriesApi<'Candlestick'> | null;
 }
 
 function calcMA(data: OhlcvData[], period: number): LineData<Time>[] {
@@ -39,65 +40,74 @@ function toCandlestickData(data: OhlcvData[]): CandlestickData<Time>[] {
   }));
 }
 
-export function KLineChart({ chartRef: externalChartRef }: KLineChartProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const internals = useRef<{
-    chart: IChartApi;
-    candle: ISeriesApi<'Candlestick'>;
-    ma5: ISeriesApi<'Line'>;
-    ma10: ISeriesApi<'Line'>;
-    ma20: ISeriesApi<'Line'>;
-    ma60: ISeriesApi<'Line'>;
-  } | null>(null);
+export const KLineChart = forwardRef<KLineChartHandle>(
+  function KLineChart(_props, ref) {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const internals = useRef<{
+      chart: IChartApi;
+      candle: ISeriesApi<'Candlestick'>;
+      ma5: ISeriesApi<'Line'>;
+      ma10: ISeriesApi<'Line'>;
+      ma20: ISeriesApi<'Line'>;
+      ma60: ISeriesApi<'Line'>;
+    } | null>(null);
 
-  const candles = useDataStore((s) => s.candles);
+    const candles = useDataStore((s) => s.candles);
 
-  // Create chart
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
+    useImperativeHandle(ref, () => ({
+      get chart() {
+        return internals.current?.chart ?? null;
+      },
+      get candleSeries() {
+        return internals.current?.candle ?? null;
+      },
+    }));
 
-    const chart = createChart(el, {
-      ...darkChartOptions,
-      autoSize: true,
-      timeScale: { ...darkChartOptions.timeScale, visible: false },
-    });
+    // Create chart
+    useEffect(() => {
+      const el = containerRef.current;
+      if (!el) return;
 
-    const candle = chart.addCandlestickSeries({
-      upColor: candleColors.upColor,
-      downColor: candleColors.downColor,
-      wickUpColor: candleColors.wickUpColor,
-      wickDownColor: candleColors.wickDownColor,
-      borderVisible: false,
-    });
+      const chart = createChart(el, {
+        ...darkChartOptions,
+        autoSize: true,
+        timeScale: { ...darkChartOptions.timeScale, visible: false },
+      });
 
-    const ma5 = chart.addLineSeries({ color: maColors.ma5, lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
-    const ma10 = chart.addLineSeries({ color: maColors.ma10, lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
-    const ma20 = chart.addLineSeries({ color: maColors.ma20, lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
-    const ma60 = chart.addLineSeries({ color: maColors.ma60, lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+      const candle = chart.addCandlestickSeries({
+        upColor: candleColors.upColor,
+        downColor: candleColors.downColor,
+        wickUpColor: candleColors.wickUpColor,
+        wickDownColor: candleColors.wickDownColor,
+        borderVisible: false,
+      });
 
-    internals.current = { chart, candle, ma5, ma10, ma20, ma60 };
-    if (externalChartRef) externalChartRef.current = chart;
+      const ma5 = chart.addLineSeries({ color: maColors.ma5, lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+      const ma10 = chart.addLineSeries({ color: maColors.ma10, lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+      const ma20 = chart.addLineSeries({ color: maColors.ma20, lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+      const ma60 = chart.addLineSeries({ color: maColors.ma60, lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
 
-    return () => {
-      chart.remove();
-      internals.current = null;
-      if (externalChartRef) externalChartRef.current = null;
-    };
-  }, [externalChartRef]);
+      internals.current = { chart, candle, ma5, ma10, ma20, ma60 };
 
-  // Update data
-  useEffect(() => {
-    const api = internals.current;
-    if (!api || candles.length === 0) return;
+      return () => {
+        chart.remove();
+        internals.current = null;
+      };
+    }, []);
 
-    api.candle.setData(toCandlestickData(candles));
-    api.ma5.setData(calcMA(candles, 5));
-    api.ma10.setData(calcMA(candles, 10));
-    api.ma20.setData(calcMA(candles, 20));
-    api.ma60.setData(calcMA(candles, 60));
-    api.chart.timeScale().fitContent();
-  }, [candles]);
+    // Update data
+    useEffect(() => {
+      const api = internals.current;
+      if (!api || candles.length === 0) return;
 
-  return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
-}
+      api.candle.setData(toCandlestickData(candles));
+      api.ma5.setData(calcMA(candles, 5));
+      api.ma10.setData(calcMA(candles, 10));
+      api.ma20.setData(calcMA(candles, 20));
+      api.ma60.setData(calcMA(candles, 60));
+      api.chart.timeScale().fitContent();
+    }, [candles]);
+
+    return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
+  },
+);

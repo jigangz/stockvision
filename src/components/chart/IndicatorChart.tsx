@@ -42,6 +42,7 @@ function calcMACD(data: OhlcvData[]) {
 
 export interface IndicatorChartHandle {
   chart: IChartApi | null;
+  histSeries: ISeriesApi<'Histogram'> | null;
 }
 
 interface IndicatorChartProps {
@@ -59,7 +60,8 @@ export const IndicatorChart = forwardRef<IndicatorChartHandle, IndicatorChartPro
     } | null>(null);
 
     useImperativeHandle(ref, () => ({
-      get chart() { return internals.current?.chart ?? null; }
+      get chart() { return internals.current?.chart ?? null; },
+      get histSeries() { return internals.current?.hist ?? null; },
     }));
 
     useEffect(() => {

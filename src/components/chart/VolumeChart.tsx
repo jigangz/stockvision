@@ -30,6 +30,7 @@ function calcVolumeMA(data: OhlcvData[], period: number): LineData<Time>[] {
 
 export interface VolumeChartHandle {
   chart: IChartApi | null;
+  volumeSeries: ISeriesApi<'Histogram'> | null;
 }
 
 interface VolumeChartProps {
@@ -47,7 +48,8 @@ export const VolumeChart = forwardRef<VolumeChartHandle, VolumeChartProps>(
     } | null>(null);
 
     useImperativeHandle(ref, () => ({
-      get chart() { return internals.current?.chart ?? null; }
+      get chart() { return internals.current?.chart ?? null; },
+      get volumeSeries() { return internals.current?.volume ?? null; },
     }));
 
     useEffect(() => {

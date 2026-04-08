@@ -25,3 +25,19 @@ created: 2026-04-07
 ### Next Steps
 - 设置 Ralph loop (含 phase gate 测试)
 - 开始 Phase 1: Tauri + React 初始化
+
+## 2026-04-08 — P2-3: 右侧空白 + 上方空白
+
+### What was built
+- **Backend**: Added `config` table to SQLite in `storage.py` (save/load/load_all functions). New `api/config.py` router with `GET /api/config` and `PUT /api/config/{key}`. Registered in `main.py`.
+- **Frontend**: `chartSettingsStore.ts` (Zustand) with `rightOffset`, `displayDays`, `priceScaleMode`, `priceMin`, `priceMax`. Fetches/saves to backend config API.
+- **ChartSettingsDialog**: modal dialog for rightOffset + displayDays settings.
+- **PriceScaleDialog**: 坐标设置 dialog with auto/manual toggle and min/max price inputs.
+- **Charts updated**: KLineChart/VolumeChart/IndicatorChart all apply `rightOffset` from store via `applyOptions`. KLineChart applies price scale via `autoscaleInfoProvider`.
+- **ChartContainer**: monitors `visibleLogicalRangeChange` to track rightOffset from user drag; re-fetches with displayDays-computed start date; shows "坐标"/"设置" buttons.
+- **dataStore**: `fetchKline` now accepts optional `start`/`end` params.
+
+### Key patterns learned
+- LW Charts `autoscaleInfoProvider` on series is the way to set fixed price range in v4
+- `subscribeVisibleLogicalRangeChange` can detect rightOffset changes (range.to - dataLength gives offset)
+- Config persistence: simple key/value SQLite table, all stored as strings

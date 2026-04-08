@@ -1,13 +1,16 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 import type { IChartApi, ISeriesApi, SeriesType } from 'lightweight-charts';
 import { KLineChart, type KLineChartHandle } from '@/components/chart/KLineChart';
 import { VolumeChart, type VolumeChartHandle } from '@/components/chart/VolumeChart';
 import { IndicatorChart, type IndicatorChartHandle } from '@/components/chart/IndicatorChart';
 import { Crosshair } from '@/components/chart/Crosshair';
 import { InfoTooltip } from '@/components/chart/InfoTooltip';
+import { ChartSettingsDialog } from '@/components/chart/ChartSettingsDialog';
+import { PriceScaleDialog } from '@/components/chart/PriceScaleDialog';
 import { useDataStore } from '@/stores/dataStore';
 import { useChartStore } from '@/stores/chartStore';
 import { useCrosshairStore } from '@/stores/crosshairStore';
+import { useChartSettingsStore } from '@/stores/chartSettingsStore';
 import { useCrosshairSync } from '@/hooks/useCrosshairSync';
 import { useWheelZoom } from '@/hooks/useWheelZoom';
 
@@ -17,15 +20,61 @@ export function ChartContainer(): React.ReactElement {
   const currentCode = useChartStore((s) => s.currentCode);
   const currentMarket = useChartStore((s) => s.currentMarket);
   const currentPeriod = useChartStore((s) => s.currentPeriod);
+  const displayDays = useChartSettingsStore((s) => s.displayDays);
+  const setRightOffset = useChartSettingsStore((s) => s.setRightOffset);
+  const saveSettings = useChartSettingsStore((s) => s.saveSettings);
+  const fetchSettings = useChartSettingsStore((s) => s.fetchSettings);
+
+  const [showSettings, setShowSettings] = useState(false);
+  const [showPriceScale, setShowPriceScale] = useState(false);
 
   const klineRef = useRef<KLineChartHandle>(null);
   const volumeRef = useRef<VolumeChartHandle>(null);
   const indicatorRef = useRef<IndicatorChartHandle>(null);
 
-  // Fetch data on mount and when code/period changes
+  // Load persisted settings on mount
   useEffect(() => {
-    void fetchKline(currentCode, currentMarket, currentPeriod);
-  }, [currentCode, currentMarket, currentPeriod, fetchKline]);
+    void fetchSettings();
+  }, [fetchSettings]);
+
+  // Compute start date from displayDays
+  const getStartDate = useCallback(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - displayDays);
+    return d.toISOString().slice(0, 10);
+  }, [displayDays]);
+
+  // Fetch data on mount and when code/period/displayDays changes
+  useEffect(() => {
+    const start = getStartDate();
+    const end = new Date().toISOString().slice(0, 10);
+    void fetchKline(currentCode, currentMarket, currentPeriod, start, end);
+  }, [currentCode, currentMarket, currentPeriod, displayDays, fetchKline, getStartDate]);
+
+  // Track rightOffset from timeScale drag and save to store (debounced)
+  const rightOffsetSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const kChart = klineRef.current?.chart;
+    if (!kChart || !candles.length) return;
+
+    const handler = () => {
+      const range = kChart.timeScale().getVisibleLogicalRange();
+      if (!range) return;
+      const newRightOffset = Math.max(0, Math.round(range.to - (candles.length - 1)));
+      setRightOffset(newRightOffset);
+      if (rightOffsetSaveTimer.current) clearTimeout(rightOffsetSaveTimer.current);
+      rightOffsetSaveTimer.current = setTimeout(() => {
+        void saveSettings({ rightOffset: newRightOffset });
+      }, 1000);
+    };
+
+    kChart.timeScale().subscribeVisibleLogicalRangeChange(handler);
+    return () => {
+      kChart.timeScale().unsubscribeVisibleLogicalRangeChange(handler);
+      if (rightOffsetSaveTimer.current) clearTimeout(rightOffsetSaveTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [candles]);
 
   // Build chart entries for crosshair sync (memoize to avoid re-subscriptions)
   const crosshairEntries = useMemo(() => {
@@ -111,6 +160,17 @@ export function ChartContainer(): React.ReactElement {
     position: 'relative',
   });
 
+  const toolbarBtnStyle: React.CSSProperties = {
+    background: 'transparent',
+    border: '1px solid var(--border)',
+    borderRadius: 2,
+    color: 'var(--text-secondary)',
+    fontSize: 11,
+    padding: '2px 6px',
+    cursor: 'pointer',
+    marginLeft: 4,
+  };
+
   return (
     <div
       style={{
@@ -122,6 +182,12 @@ export function ChartContainer(): React.ReactElement {
       }}
       onMouseLeave={handleMouseLeave}
     >
+      {/* Chart toolbar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: 24, padding: '0 4px', background: 'var(--bg-secondary)', flexShrink: 0 }}>
+        <button style={toolbarBtnStyle} onClick={() => setShowPriceScale(true)}>坐标</button>
+        <button style={toolbarBtnStyle} onClick={() => setShowSettings(true)}>设置</button>
+      </div>
+
       {/* K-Line area */}
       <div style={chartAreaStyle('0 0 55%')}>
         <KLineChart ref={klineRef} />
@@ -140,6 +206,9 @@ export function ChartContainer(): React.ReactElement {
         <IndicatorChart ref={indicatorRef} candles={candles} />
         <Crosshair chartArea="indicator" />
       </div>
+
+      {showSettings && <ChartSettingsDialog onClose={() => setShowSettings(false)} />}
+      {showPriceScale && <PriceScaleDialog onClose={() => setShowPriceScale(false)} />}
     </div>
   );
 }

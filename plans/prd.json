@@ -162,8 +162,9 @@
         "Settings persist to SQLite config table"
       ],
       "priority": "medium",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "completed_at": "2026-04-08",
+      "notes": "ChartSettingsDialog + PriceScaleDialog; chartSettingsStore; config API with SQLite; rightOffset tracked from timeScale drag"
     },
     {
       "id": "P2-4",

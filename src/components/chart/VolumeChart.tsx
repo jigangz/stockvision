@@ -9,6 +9,7 @@ import {
 } from 'lightweight-charts';
 import type { OhlcvData } from '@/stores/dataStore';
 import { darkChartOptions } from '@/theme/darkTheme';
+import { useChartSettingsStore } from '@/stores/chartSettingsStore';
 
 function toVolumeData(data: OhlcvData[]): HistogramData<Time>[] {
   return data.map((d) => ({
@@ -40,6 +41,7 @@ interface VolumeChartProps {
 export const VolumeChart = forwardRef<VolumeChartHandle, VolumeChartProps>(
   function VolumeChart({ candles }, ref) {
     const containerRef = useRef<HTMLDivElement>(null);
+    const rightOffset = useChartSettingsStore((s) => s.rightOffset);
     const internals = useRef<{
       chart: IChartApi;
       volume: ISeriesApi<'Histogram'>;
@@ -86,6 +88,12 @@ export const VolumeChart = forwardRef<VolumeChartHandle, VolumeChartProps>(
       api.ma5.setData(calcVolumeMA(candles, 5));
       api.ma10.setData(calcVolumeMA(candles, 10));
     }, [candles]);
+
+    useEffect(() => {
+      const api = internals.current;
+      if (!api) return;
+      api.chart.applyOptions({ timeScale: { rightOffset } });
+    }, [rightOffset]);
 
     return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
   }

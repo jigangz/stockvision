@@ -17,7 +17,7 @@ interface DataState {
 }
 
 interface DataActions {
-  fetchKline: (code: string, market: string, period: string) => Promise<void>;
+  fetchKline: (code: string, market: string, period: string, start?: string, end?: string) => Promise<void>;
 }
 
 export const useDataStore = create<DataState & DataActions>((set) => ({
@@ -25,10 +25,12 @@ export const useDataStore = create<DataState & DataActions>((set) => ({
   loading: false,
   error: null,
 
-  fetchKline: async (code: string, market: string, period: string) => {
+  fetchKline: async (code: string, market: string, period: string, start?: string, end?: string) => {
     set({ loading: true, error: null });
     try {
-      const url = `http://localhost:8899/api/data/kline?code=${code}&market=${market}&period=${period}`;
+      let url = `http://localhost:8899/api/data/kline?code=${code}&market=${market}&period=${period}`;
+      if (start) url += `&start=${start}`;
+      if (end) url += `&end=${end}`;
       const res = await fetch(url);
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${res.statusText}`);

@@ -75,6 +75,55 @@ def load_candles(code: str, market: str, period: str) -> list[Candle] | None:
     ]
 
 
+def init_config_table() -> None:
+    """Initialize SQLite config table."""
+    _ensure_dir()
+    conn = sqlite3.connect(str(DB_PATH))
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS config (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def save_config(key: str, value: str) -> None:
+    """Save a config value to SQLite."""
+    _ensure_dir()
+    init_config_table()
+    conn = sqlite3.connect(str(DB_PATH))
+    conn.execute(
+        "INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
+        (key, value),
+    )
+    conn.commit()
+    conn.close()
+
+
+def load_config(key: str, default: str | None = None) -> str | None:
+    """Load a config value from SQLite."""
+    _ensure_dir()
+    init_config_table()
+    conn = sqlite3.connect(str(DB_PATH))
+    cursor = conn.execute("SELECT value FROM config WHERE key = ?", (key,))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else default
+
+
+def load_all_config() -> dict[str, str]:
+    """Load all config values from SQLite."""
+    _ensure_dir()
+    init_config_table()
+    conn = sqlite3.connect(str(DB_PATH))
+    cursor = conn.execute("SELECT key, value FROM config")
+    result = {row[0]: row[1] for row in cursor.fetchall()}
+    conn.close()
+    return result
+
+
 def save_stock_list(stocks: list[dict]) -> None:
     """Upsert stock list into SQLite."""
     _ensure_dir()

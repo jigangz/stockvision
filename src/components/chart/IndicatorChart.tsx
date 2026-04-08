@@ -1,4 +1,5 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { useChartSettingsStore } from '@/stores/chartSettingsStore';
 import {
   createChart,
   type IChartApi,
@@ -52,6 +53,7 @@ interface IndicatorChartProps {
 export const IndicatorChart = forwardRef<IndicatorChartHandle, IndicatorChartProps>(
   function IndicatorChart({ candles }, ref) {
     const containerRef = useRef<HTMLDivElement>(null);
+    const rightOffset = useChartSettingsStore((s) => s.rightOffset);
     const internals = useRef<{
       chart: IChartApi;
       hist: ISeriesApi<'Histogram'>;
@@ -95,6 +97,12 @@ export const IndicatorChart = forwardRef<IndicatorChartHandle, IndicatorChartPro
       api.dif.setData(dif);
       api.dea.setData(dea);
     }, [candles]);
+
+    useEffect(() => {
+      const api = internals.current;
+      if (!api) return;
+      api.chart.applyOptions({ timeScale: { rightOffset } });
+    }, [rightOffset]);
 
     return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
   }

@@ -9,6 +9,7 @@ import {
 } from 'lightweight-charts';
 import { useDataStore, type OhlcvData } from '@/stores/dataStore';
 import { darkChartOptions, candleColors, maColors } from '@/theme/darkTheme';
+import { useChartSettingsStore } from '@/stores/chartSettingsStore';
 
 export interface KLineChartHandle {
   chart: IChartApi | null;
@@ -53,6 +54,10 @@ export const KLineChart = forwardRef<KLineChartHandle>(
     } | null>(null);
 
     const candles = useDataStore((s) => s.candles);
+    const rightOffset = useChartSettingsStore((s) => s.rightOffset);
+    const priceScaleMode = useChartSettingsStore((s) => s.priceScaleMode);
+    const priceMin = useChartSettingsStore((s) => s.priceMin);
+    const priceMax = useChartSettingsStore((s) => s.priceMax);
 
     useImperativeHandle(ref, () => ({
       get chart() {
@@ -107,6 +112,29 @@ export const KLineChart = forwardRef<KLineChartHandle>(
       api.ma60.setData(calcMA(candles, 60));
       api.chart.timeScale().fitContent();
     }, [candles]);
+
+    // Apply rightOffset when it changes
+    useEffect(() => {
+      const api = internals.current;
+      if (!api) return;
+      api.chart.applyOptions({ timeScale: { rightOffset } });
+    }, [rightOffset]);
+
+    // Apply price scale range when settings change
+    useEffect(() => {
+      const api = internals.current;
+      if (!api) return;
+      if (priceScaleMode === 'manual' && priceMin != null && priceMax != null) {
+        api.candle.applyOptions({
+          autoscaleInfoProvider: () => ({
+            priceRange: { minValue: priceMin, maxValue: priceMax },
+            margins: { above: 0.05, below: 0.05 },
+          }),
+        });
+      } else {
+        api.candle.applyOptions({ autoscaleInfoProvider: undefined });
+      }
+    }, [priceScaleMode, priceMin, priceMax]);
 
     return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
   },

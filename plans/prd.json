@@ -504,6 +504,71 @@
       "passes": true,
       "completed_at": "2026-04-08",
       "notes": "FINAL GATE: 240/240 tests pass, 0 TypeScript errors. All 6 phases verified: K-line/MA/MACD, crosshair/zoom/settings, drawing tools (20+), 22 indicators + formula engine, screener/heatmap/capital flow/datasource, backtest engine, keyboard shortcuts, Tauri packaging, performance optimizations."
+    },
+    {
+      "id": "FIX-1",
+      "title": "补齐画线工具至 20+ (当前仅 13 个)",
+      "acceptanceCriteria": [
+        "DrawingToolbar 和 DrawingCanvas 支持至少 20 种工具类型",
+        "新增工具: parallel_line (平行线), price_line (价格线), arrow (箭头), arc (弧线), fib_fan (斐波扇形), fib_arc (斐波弧线), fib_timezone (斐波时间带)",
+        "每个工具都能正确渲染和持久化",
+        "TypeScript 编译通过"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": "Audit 发现只有 13 个画线工具，spec 要求 20+"
+    },
+    {
+      "id": "FIX-2",
+      "title": "补齐 /api/data/sync 和 /api/data/import 端点",
+      "acceptanceCriteria": [
+        "POST /api/data/sync 端点存在且可调用",
+        "POST /api/data/import 端点存在且可调用 (或从 /api/datasource/import 添加别名)",
+        "添加对应的 pytest 测试",
+        "所有测试通过"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": "Audit 发现 /api/data/sync 缺失，/api/data/import 在 datasource router 下"
+    },
+    {
+      "id": "FIX-3",
+      "title": "补齐快捷键 (Ctrl+Z, Delete, PageUp/Down, Home/End)",
+      "acceptanceCriteria": [
+        "Ctrl+Z: 撤销最近一次画线",
+        "Delete: 删除选中画线",
+        "PageUp/PageDown: 缩放图表",
+        "Home/End: 跳转到最早/最新数据",
+        "在 useKeyboardShortcuts.ts 中实现"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": "Audit 发现部分快捷键缺失"
+    },
+    {
+      "id": "FIX-4",
+      "title": "TopNav 高度改为 60px",
+      "acceptanceCriteria": [
+        "TopNav 组件高度为 60px (spec 要求)",
+        "不影响整体布局比例"
+      ],
+      "priority": "low",
+      "passes": false,
+      "notes": "Audit 发现 TopNav 是 40px 而非 spec 的 60px"
+    },
+    {
+      "id": "FIX-GATE",
+      "title": "修复验证 Gate: 所有 FIX 项通过",
+      "acceptanceCriteria": [
+        "所有 FIX-1 到 FIX-4 通过",
+        "TypeScript 0 errors",
+        "所有 Python 测试通过",
+        "画线工具 >= 20 种",
+        "/api/data/sync 和 /api/data/import 可调用"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": "修复轮 Gate"
     }
   ]
 }

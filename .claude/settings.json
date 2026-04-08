@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "stop": [
+      {
+        "type": "command",
+        "command": "bash .claude/hooks/stop-hook.sh"
+      }
+    ]
+  }
+}

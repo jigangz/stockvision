@@ -1,0 +1,486 @@
+{
+  "repo": "jigangz/stockvision",
+  "branchName": "main",
+  "verifyCommand": "npm run typecheck && cd python && pytest ../tests/python/ -v && cd ..",
+  "acceptanceCriteria": [
+    "All phase gate tests pass",
+    "No TypeScript errors",
+    "Python tests pass",
+    "UI matches 通达信 reference screenshots"
+  ],
+  "features": [
+    {
+      "id": "P1-1",
+      "title": "Phase 1.1: Tauri + React 项目初始化",
+      "acceptanceCriteria": [
+        "npm create tauri-app with react-ts template",
+        "lightweight-charts, zustand, d3 installed",
+        "Vite alias @ -> src/ configured",
+        "tauri.conf.json: title 'StockVision', default 1920x1080",
+        "App builds and opens empty window"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": "Foundation task — everything depends on this"
+    },
+    {
+      "id": "P1-2",
+      "title": "Phase 1.2: 黑底主题系统",
+      "acceptanceCriteria": [
+        "CSS variables defined per CLAUDE.md spec (--bg-primary, --color-up, --color-down, etc.)",
+        "darkTheme.ts + global.css created",
+        "Body background #000000, default text white",
+        "No hardcoded colors in components"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P1-3",
+      "title": "Phase 1.3: 主布局 MainLayout.tsx",
+      "acceptanceCriteria": [
+        "TopNav 60px, K线区 55%, 成交量 20%, 指标 25%, InfoPanel 25% width, StatusBar 28px",
+        "Layout matches 通达信 reference proportions",
+        "Splitter between chart areas is draggable",
+        "InfoPanel is collapsible"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P1-4",
+      "title": "Phase 1.4: K线主图 KLineChart.tsx",
+      "acceptanceCriteria": [
+        "Lightweight Charts 4.x rendering candlesticks",
+        "Red up (#FF4444), green down (#00CC66)",
+        "MA5 yellow, MA10 purple, MA20 green, MA60 white",
+        "rightOffset 30 bars default",
+        "Chart renders with mock data"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P1-5",
+      "title": "Phase 1.5: 周期切换器 PeriodSelector.tsx",
+      "acceptanceCriteria": [
+        "All periods available: min1/5/15/30/60, daily/weekly/monthly, quarterly/yearly",
+        "Custom period dialog works (N + unit)",
+        "Period switching triggers data reload"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P1-6",
+      "title": "Phase 1.6: 成交量 + MACD",
+      "acceptanceCriteria": [
+        "Volume HistogramSeries with red/green coloring",
+        "Volume MA5 (yellow) + MA10 (purple)",
+        "MACD(12,26,9): DIF white, DEA yellow, MACD histogram red/green",
+        "Three charts share timeScale, sync on scroll/zoom"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P1-7",
+      "title": "Phase 1.7: 数据层 + Data Adapter",
+      "acceptanceCriteria": [
+        "DataAdapter interface defined (fetchKline, fetchStockList, sync)",
+        "MockAdapter generates random OHLCV data",
+        "AKShareAdapter skeleton with real API call",
+        "TdxFileAdapter reads .day binary files",
+        "FastAPI backend runs on localhost:8899",
+        "GET /api/data/kline returns mock data",
+        "GET /api/data/stocks returns stock list"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": "Data adapter 抽象层 — dev 用 mock, prod 切 AKShare/Tushare/通达信"
+    },
+    {
+      "id": "P1-GATE",
+      "title": "Phase 1 Gate: E2E 验收测试",
+      "acceptanceCriteria": [
+        "App launches showing real/mock K-line chart",
+        "MA lines display correctly",
+        "Volume chart syncs with K-line",
+        "MACD indicator displays below",
+        "Period switching works",
+        "All TypeScript compiles without errors",
+        "Python backend starts and responds to API calls",
+        "All unit tests pass"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": "PHASE GATE: 必须全部通过才能进入 Phase 2"
+    },
+    {
+      "id": "P2-1",
+      "title": "Phase 2.1: 十字光标 + 信息浮窗",
+      "acceptanceCriteria": [
+        "Crosshair snaps to nearest K-line center",
+        "Arrow keys move one bar at a time",
+        "Vertical line spans all 3 chart areas",
+        "Horizontal line stays within current area",
+        "Y-axis price label (red bg) at crosshair",
+        "X-axis time label at crosshair",
+        "Info tooltip shows: symbol, time, OHLC, change%, volume, amount, turnover, amplitude",
+        "Red bg for tooltip, red/green coloring for values"
+      ],
+      "priority": "medium",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P2-2",
+      "title": "Phase 2.2: 鼠标滚轮缩放",
+      "acceptanceCriteria": [
+        "Scroll up = zoom in (fewer bars, more detail), centered on cursor",
+        "Scroll down = zoom out (more bars)",
+        "All 3 chart areas sync zoom on X-axis",
+        "150ms ease-out animation"
+      ],
+      "priority": "medium",
+      "passes": false,
+      "notes": "Lightweight Charts native handleScroll + handleScale"
+    },
+    {
+      "id": "P2-3",
+      "title": "Phase 2.3: 右侧空白 + 上方空白",
+      "acceptanceCriteria": [
+        "rightOffset adjustable via settings dialog (default 30)",
+        "Display days setting dialog (default 280)",
+        "rightOffset draggable at timeScale edge",
+        "Price scale manual range setting (坐标设置 dialog)",
+        "Settings persist to SQLite config table"
+      ],
+      "priority": "medium",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P2-4",
+      "title": "Phase 2.4: 右侧信息面板 InfoPanel",
+      "acceptanceCriteria": [
+        "MarketSummary: latest price, open, prev close, change%, volume, turnover",
+        "TickList: time|price|volume scrolling list with red/green",
+        "Sector quick links section",
+        "Panel collapse/expand works"
+      ],
+      "priority": "medium",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P2-GATE",
+      "title": "Phase 2 Gate: 交互验收测试",
+      "acceptanceCriteria": [
+        "Crosshair works smoothly with mouse and keyboard",
+        "Zoom in/out works with scroll wheel",
+        "Right blank and top blank adjustable",
+        "Info panel displays all required fields",
+        "All interactions feel responsive (<100ms)",
+        "No visual glitches on resize"
+      ],
+      "priority": "medium",
+      "passes": false,
+      "notes": "PHASE GATE: 必须全部通过才能进入 Phase 3"
+    },
+    {
+      "id": "P3-1",
+      "title": "Phase 3.1: 画线引擎架构",
+      "acceptanceCriteria": [
+        "Canvas overlay layer on top of Lightweight Charts",
+        "Drawings stored as price-time coordinates (not pixels)",
+        "Coordinate conversion: timeToCoordinate + priceToCoordinate",
+        "Redraws on view change (scroll/zoom)",
+        "Drawing works in future blank area and top blank area"
+      ],
+      "priority": "medium",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P3-2",
+      "title": "Phase 3.2: 画线工具栏 DrawingToolbar",
+      "acceptanceCriteria": [
+        "Floating panel with grid layout (6-8 columns)",
+        "All tool types available with icons + tooltips",
+        "Line style selector (solid/dashed/dotted)",
+        "Color picker",
+        "Line width 1-5px selector"
+      ],
+      "priority": "medium",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P3-3",
+      "title": "Phase 3.3: 各工具实现 (20+ tools)",
+      "acceptanceCriteria": [
+        "Line/ray/segment: 2-point tools work",
+        "Horizontal/vertical: 1-point tools work",
+        "Trendline: extends to future area",
+        "Channel: 3-point parallel lines",
+        "Fibonacci retracement: 23.6%/38.2%/50%/61.8%/78.6% levels",
+        "Gann angle: 1x1/1x2/2x1 angle lines",
+        "Rectangle: semi-transparent fill",
+        "Text label: popup input dialog",
+        "Buy/sell/flat marks on K-line positions",
+        "All tools work in future blank + top blank areas"
+      ],
+      "priority": "medium",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P3-4",
+      "title": "Phase 3.4: 画线持久化",
+      "acceptanceCriteria": [
+        "Drawings auto-save to SQLite drawings table",
+        "Indexed by stock_code + period",
+        "Auto-load on stock/period switch",
+        "Single delete and clear all work",
+        "Drawings survive app restart"
+      ],
+      "priority": "medium",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P3-GATE",
+      "title": "Phase 3 Gate: 画线 CRUD 验收测试",
+      "acceptanceCriteria": [
+        "All 20+ drawing tools create correctly",
+        "Drawings display at correct positions on zoom/scroll",
+        "Drawings persist and reload correctly",
+        "Delete single and clear all work",
+        "Drawing in future blank area works",
+        "No coordinate drift on different data ranges"
+      ],
+      "priority": "medium",
+      "passes": false,
+      "notes": "PHASE GATE: 必须全部通过才能进入 Phase 4"
+    },
+    {
+      "id": "P4-1",
+      "title": "Phase 4.1: 指标计算引擎 (20+ indicators)",
+      "acceptanceCriteria": [
+        "All 22 indicators compute correctly: MACD/DMA/DMI/TRIX/FSL/EMV/RSI/KDJ/WR/CCI/ROC/MTM/PSY/VOL-TDX/OBV/VR/ASI/BOLL/SAR/BRAR/CR/MOST",
+        "Frontend tab bar switches between indicators",
+        "POST /api/indicators/calculate works for all indicators",
+        "Indicator values match pandas-ta reference output"
+      ],
+      "priority": "medium",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P4-2",
+      "title": "Phase 4.2: 区间统计弹窗",
+      "acceptanceCriteria": [
+        "Dialog with date range picker",
+        "Left column: price/K-line stats (all fields from spec)",
+        "Right column: capital flow + volatility stats",
+        "POST /api/stats/interval returns all required fields",
+        "Layout matches 通达信 reference"
+      ],
+      "priority": "medium",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P4-3",
+      "title": "Phase 4.3: 自定义公式引擎",
+      "acceptanceCriteria": [
+        "lark parser handles 通达信-compatible formula syntax",
+        "Built-in functions: MA/EMA/SMA/REF/REFX/CROSS/LONGCROSS/HHV/LLV/COUNT/BARSLAST/SUM",
+        "Built-in variables: OPEN/HIGH/LOW/CLOSE/VOL/AMOUNT",
+        "Monaco Editor with syntax highlighting",
+        "Real-time validation via POST /api/formula/validate",
+        "Evaluation via POST /api/formula/evaluate",
+        "Results overlay on main chart or sub chart"
+      ],
+      "priority": "medium",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P4-GATE",
+      "title": "Phase 4 Gate: 指标计算验收测试",
+      "acceptanceCriteria": [
+        "All 22 indicators compute and display correctly",
+        "Indicator values verified against known test data",
+        "Formula engine parses and evaluates test formulas",
+        "Interval stats return correct calculations",
+        "No Python backend errors under normal use"
+      ],
+      "priority": "medium",
+      "passes": false,
+      "notes": "PHASE GATE: 必须全部通过才能进入 Phase 5"
+    },
+    {
+      "id": "P5-1",
+      "title": "Phase 5.1: 选股筛选器 StockScreener",
+      "acceptanceCriteria": [
+        "Condition builder UI: field selector + operator + value",
+        "Multiple conditions (AND logic)",
+        "Formula-based screening supported",
+        "Results table with sortable columns",
+        "Click row jumps to K-line chart",
+        "POST /api/screener/filter works correctly"
+      ],
+      "priority": "low",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P5-2",
+      "title": "Phase 5.2: 板块热力图 SectorHeatmap",
+      "acceptanceCriteria": [
+        "D3.js treemap rendering",
+        "Color: red (涨) to green (跌) gradient",
+        "Area: market cap or volume (switchable)",
+        "Click sector expands to show stocks",
+        "Click stock jumps to K-line chart"
+      ],
+      "priority": "low",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P5-3",
+      "title": "Phase 5.3: 资金流向分析",
+      "acceptanceCriteria": [
+        "Top: daily capital flow overview (main force vs retail)",
+        "Bottom: historical capital flow trend chart",
+        "Categories: large (>50万) / medium (5-50万) / small (<5万)",
+        "Each shows: buy / sell / net volume / net amount"
+      ],
+      "priority": "low",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P5-4",
+      "title": "Phase 5.4: 数据导入管理 DataSourceSettings",
+      "acceptanceCriteria": [
+        "AKShare/Tushare config with connection test",
+        "通达信 directory picker for local file import",
+        "Priority drag-sort for data sources",
+        "Sync time picker (default 15:30)",
+        "Manual import: drag-drop CSV/XLSX + 通达信 format auto-detect",
+        "Import log table: time/source/count/status/details"
+      ],
+      "priority": "low",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P5-GATE",
+      "title": "Phase 5 Gate: 选股/数据管理验收测试",
+      "acceptanceCriteria": [
+        "Screener returns correct filtered results",
+        "Heatmap renders with correct colors and proportions",
+        "Data import from CSV and 通达信 files works",
+        "API data source connection and sync works"
+      ],
+      "priority": "low",
+      "passes": false,
+      "notes": "PHASE GATE: 必须全部通过才能进入 Phase 6"
+    },
+    {
+      "id": "P6-1",
+      "title": "Phase 6.1: 回测引擎 backtest_engine.py",
+      "acceptanceCriteria": [
+        "BacktestEngine class with formula-based buy/sell conditions",
+        "Outputs: totalReturn, maxDrawdown, winRate, profitFactor, sharpe, tradeCount, avgHoldDays",
+        "Equity curve calculation",
+        "POST /api/backtest/run returns correct results"
+      ],
+      "priority": "low",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P6-2",
+      "title": "Phase 6.2: 回测可视化 BacktestResult",
+      "acceptanceCriteria": [
+        "Summary stat cards (return/drawdown/winrate/sharpe/trades)",
+        "K-line with buy (red up arrow) and sell (green down arrow) markers",
+        "Equity curve chart vs benchmark",
+        "Trade records table: time/direction/price/shares/pnl"
+      ],
+      "priority": "low",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P6-3",
+      "title": "Phase 6.3: 快捷键系统",
+      "acceptanceCriteria": [
+        "F5 refresh, F10 stock info",
+        "Arrow keys: left/right move crosshair, up/down switch stock",
+        "PageUp/Down: zoom in/out",
+        "Home/End: jump to earliest/latest",
+        "Enter: stock code input jump",
+        "Esc: cancel/close dialog",
+        "Ctrl+Z: undo last drawing",
+        "Delete: remove selected drawing"
+      ],
+      "priority": "low",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P6-4",
+      "title": "Phase 6.4: Tauri 打包发布",
+      "acceptanceCriteria": [
+        "PyInstaller bundles python/ to single executable",
+        "tauri.conf.json externalBin configured for python-backend sidecar",
+        "npm run tauri build produces MSI/EXE installer on Windows",
+        "Installer works on clean Windows machine (no Python/Node required)",
+        "App launches and all features work from installed version"
+      ],
+      "priority": "low",
+      "passes": false,
+      "notes": "用户是老人，必须双击安装即可使用"
+    },
+    {
+      "id": "P6-5",
+      "title": "Phase 6.5: 性能优化",
+      "acceptanceCriteria": [
+        "Virtual scrolling for >5000 bars",
+        "Indicator calculations in Web Worker",
+        "Screener scan with progress indicator",
+        "Parquet reads via pyarrow (not pandas)",
+        "First screen: show latest 100 bars, lazy load rest"
+      ],
+      "priority": "low",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P6-GATE",
+      "title": "Phase 6 Gate: 最终验收测试 + 安装包测试",
+      "acceptanceCriteria": [
+        "All keyboard shortcuts work",
+        "Backtest engine produces correct results",
+        "MSI/EXE installs on clean Windows 11",
+        "App starts without errors on fresh install",
+        "All 6 phases' features work end-to-end",
+        "Performance: <2s first load, smooth scroll at 5000+ bars"
+      ],
+      "priority": "low",
+      "passes": false,
+      "notes": "FINAL GATE: 最终发布前必须全部通过"
+    }
+  ]
+}

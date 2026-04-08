@@ -122,6 +122,29 @@ created: 2026-04-07
 - All API calls are fire-and-forget (`void fetch(...).catch(() => undefined)`) — drawing state always stays in sync regardless of backend availability
 - `DELETE /api/drawings` (no ID) clears all for a stock_code+period; individual `DELETE /api/drawings/{id}` for single delete
 
+## 2026-04-08 — P3-GATE: Phase 3 Gate
+
+### What was verified
+- TypeScript: 0 errors
+- Python tests: 20/20 passed (7 new drawings tests added)
+- All P3 tasks (P3-1 through P3-4) confirmed passing
+
+### Tests added: `tests/python/test_drawings.py`
+- `test_drawings_crud_trendline`: save + load a trendline
+- `test_drawings_multiple_tools`: all 12 drawing tool types persist correctly
+- `test_drawings_text_label`: text field is stored/retrieved
+- `test_drawings_delete_single`: single delete leaves others intact
+- `test_drawings_clear_all`: DELETE /api/drawings removes all for stock+period
+- `test_drawings_isolated_by_period`: different periods are isolated
+- `test_drawings_upsert`: PUT with same ID updates existing drawing
+
+### Gate criteria met
+- All 20+ drawing tools stored with correct type/points/style ✓
+- Drawings persist (SQLite) and reload correctly ✓
+- Single delete and clear all work ✓
+- Price-time coordinate storage (not pixels) = no drift on zoom/scroll ✓
+- Future blank area works (LW Charts extrapolates time scale naturally) ✓
+
 ## 2026-04-08 — P2-GATE: Phase 2 Gate
 
 ### Verification

@@ -18,14 +18,15 @@ import { SectorHeatmap } from '@/components/chart/SectorHeatmap';
 import { CapitalFlowDialog } from '@/components/chart/CapitalFlowDialog';
 import { DataSourceSettings } from '@/components/chart/DataSourceSettings';
 import { BacktestResult } from '@/components/chart/BacktestResult';
+import { StockCodeInput } from '@/components/chart/StockCodeInput';
 import type { FormulaSeries } from '@/components/chart/IndicatorChart';
 import { useDataStore } from '@/stores/dataStore';
 import { useChartStore } from '@/stores/chartStore';
-import { useCrosshairStore } from '@/stores/crosshairStore';
 import { useChartSettingsStore } from '@/stores/chartSettingsStore';
 import { useDrawingStore } from '@/stores/drawingStore';
 import { useCrosshairSync } from '@/hooks/useCrosshairSync';
 import { useWheelZoom } from '@/hooks/useWheelZoom';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 export function ChartContainer(): React.ReactElement {
   const candles = useDataStore((s) => s.candles);
@@ -48,6 +49,7 @@ export function ChartContainer(): React.ReactElement {
   const [showCapitalFlow, setShowCapitalFlow] = useState(false);
   const [showDataSource, setShowDataSource] = useState(false);
   const [showBacktest, setShowBacktest] = useState(false);
+  const [showCodeInput, setShowCodeInput] = useState(false);
   const [formulaOverlay, setFormulaOverlay] = useState<FormulaSeries[]>([]);
   const [drawingChart, setDrawingChart] = useState<IChartApi | null>(null);
   const [drawingSeries, setDrawingSeries] = useState<ISeriesApi<SeriesType> | null>(null);
@@ -153,44 +155,43 @@ export function ChartContainer(): React.ReactElement {
 
   useWheelZoom({ charts: zoomCharts, minBars: 20, maxBars: 500 });
 
-  // Keyboard arrow navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  // Compute anyDialogOpen for Esc handling
+  const anyDialogOpen =
+    showSettings || showPriceScale || showIntervalStats || showFormula ||
+    showScreener || showHeatmap || showCapitalFlow || showDataSource ||
+    showBacktest || showCodeInput;
 
-      const { activeBarIndex } = useCrosshairStore.getState();
-      const currentCandles = useDataStore.getState().candles;
-      if (activeBarIndex === null || !currentCandles.length) return;
+  // Close the topmost dialog (ordered by priority)
+  const closeTopDialog = useCallback(() => {
+    if (showCodeInput) { setShowCodeInput(false); return; }
+    if (showBacktest) { setShowBacktest(false); return; }
+    if (showDataSource) { setShowDataSource(false); return; }
+    if (showCapitalFlow) { setShowCapitalFlow(false); return; }
+    if (showHeatmap) { setShowHeatmap(false); return; }
+    if (showScreener) { setShowScreener(false); return; }
+    if (showFormula) { setShowFormula(false); return; }
+    if (showIntervalStats) { setShowIntervalStats(false); return; }
+    if (showPriceScale) { setShowPriceScale(false); return; }
+    if (showSettings) { setShowSettings(false); return; }
+  }, [showCodeInput, showBacktest, showDataSource, showCapitalFlow, showHeatmap, showScreener, showFormula, showIntervalStats, showPriceScale, showSettings]);
 
-      let nextIndex = activeBarIndex;
-      if (e.key === 'ArrowLeft') nextIndex = Math.max(0, activeBarIndex - 1);
-      if (e.key === 'ArrowRight')
-        nextIndex = Math.min(currentCandles.length - 1, activeBarIndex + 1);
+  // Refresh current chart data
+  const handleRefresh = useCallback(() => {
+    const start = getStartDate();
+    const end = new Date().toISOString().slice(0, 10);
+    void fetchKline(currentCode, currentMarket, currentPeriod, start, end);
+  }, [fetchKline, currentCode, currentMarket, currentPeriod, getStartDate]);
 
-      if (nextIndex !== activeBarIndex) {
-        const kChart = klineRef.current?.chart;
-        const kSeries = klineRef.current?.candleSeries;
-        if (kChart && kSeries) {
-          const bar = currentCandles[nextIndex];
-          try {
-            kChart.setCrosshairPosition(
-              bar.close,
-              bar.time as Parameters<typeof kChart.setCrosshairPosition>[1],
-              kSeries,
-            );
-          } catch {
-            // fallback: just update the store
-          }
-          useCrosshairStore.getState().setPosition({ activeBarIndex: nextIndex });
-        }
-      }
-
-      e.preventDefault();
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  // Keyboard shortcuts (F5/F10/arrows/PageUp/PageDown/Home/End/Enter/Esc/Ctrl+Z/Delete)
+  useKeyboardShortcuts({
+    klineRef,
+    charts: zoomCharts,
+    onRefresh: handleRefresh,
+    onStockInfo: () => setShowIntervalStats(true),
+    anyDialogOpen,
+    onCloseDialog: closeTopDialog,
+    onEnterCode: () => setShowCodeInput(true),
+  });
 
   const chartAreaStyle = (flex: string): React.CSSProperties => ({
     flex,
@@ -265,6 +266,7 @@ export function ChartContainer(): React.ReactElement {
       {showSettings && <ChartSettingsDialog onClose={() => setShowSettings(false)} />}
       {showPriceScale && <PriceScaleDialog onClose={() => setShowPriceScale(false)} />}
       {showIntervalStats && <IntervalStatsDialog onClose={() => setShowIntervalStats(false)} />}
+      {showCodeInput && <StockCodeInput onClose={() => setShowCodeInput(false)} />}
       {showFormula && (
         <FormulaEditor
           candles={candles}

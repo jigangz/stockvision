@@ -257,8 +257,9 @@
         "Drawings survive app restart"
       ],
       "priority": "medium",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "completed_at": "2026-04-08",
+      "notes": "drawings table in SQLite; /api/drawings CRUD router; drawingStore.ts: loadDrawings(code,period) sets context+state, commitDrawing/removeDrawing/clearAll fire async PUT/DELETE; ChartContainer auto-loads drawings on stock/period change"
     },
     {
       "id": "P3-GATE",

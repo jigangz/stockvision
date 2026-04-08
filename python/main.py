@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.data import router as data_router, set_adapter
 from api.config import router as config_router
+from api.drawings import router as drawings_router
 from data.mock_adapter import MockAdapter
 
 app = FastAPI(title="StockVision API", version="0.1.0")
@@ -30,6 +31,7 @@ set_adapter(adapter)
 
 app.include_router(data_router)
 app.include_router(config_router)
+app.include_router(drawings_router)
 
 
 @app.get("/api/health")

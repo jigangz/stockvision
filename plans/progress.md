@@ -108,6 +108,20 @@ created: 2026-04-07
 - `window.prompt()` works synchronously in Tauri WebView for text input
 - For 1-click marks (buyMark/sellMark/flatMark), use same pattern as horizontal/vertical
 
+## 2026-04-08 — P3-4: 画线持久化
+
+### What was built
+- **`python/data/storage.py`**: Added `drawings` table (id, stock_code, period, type, points JSON, style JSON, text). Functions: `init_drawings_table`, `save_drawing`, `load_drawings`, `delete_drawing`, `clear_drawings`.
+- **`python/api/drawings.py`**: New FastAPI router with `GET /api/drawings`, `PUT /api/drawings/{id}`, `DELETE /api/drawings/{id}`, `DELETE /api/drawings` — all query-parameterized by `stock_code` and `period`.
+- **`python/main.py`**: Registered `drawings_router`.
+- **`src/stores/drawingStore.ts`**: Added `context: {code, period}` state, `setContext`, `loadDrawings(code, period)`. Modified `commitDrawing`, `removeDrawing`, `clearAll` to fire async API calls (fire-and-forget) when context is set.
+- **`src/components/chart/ChartContainer.tsx`**: Added `useEffect` on `[currentCode, currentPeriod]` that calls `loadDrawings(currentCode, currentPeriod)` — auto-loads on stock/period switch.
+
+### Key patterns learned
+- `loadDrawings` sets both state and context atomically so subsequent commits/deletes use the right key
+- All API calls are fire-and-forget (`void fetch(...).catch(() => undefined)`) — drawing state always stays in sync regardless of backend availability
+- `DELETE /api/drawings` (no ID) clears all for a stock_code+period; individual `DELETE /api/drawings/{id}` for single delete
+
 ## 2026-04-08 — P2-GATE: Phase 2 Gate
 
 ### Verification

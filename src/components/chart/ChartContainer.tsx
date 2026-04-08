@@ -14,6 +14,7 @@ import { useDataStore } from '@/stores/dataStore';
 import { useChartStore } from '@/stores/chartStore';
 import { useCrosshairStore } from '@/stores/crosshairStore';
 import { useChartSettingsStore } from '@/stores/chartSettingsStore';
+import { useDrawingStore } from '@/stores/drawingStore';
 import { useCrosshairSync } from '@/hooks/useCrosshairSync';
 import { useWheelZoom } from '@/hooks/useWheelZoom';
 
@@ -27,6 +28,7 @@ export function ChartContainer(): React.ReactElement {
   const setRightOffset = useChartSettingsStore((s) => s.setRightOffset);
   const saveSettings = useChartSettingsStore((s) => s.saveSettings);
   const fetchSettings = useChartSettingsStore((s) => s.fetchSettings);
+  const loadDrawings = useDrawingStore((s) => s.loadDrawings);
 
   const [showSettings, setShowSettings] = useState(false);
   const [showPriceScale, setShowPriceScale] = useState(false);
@@ -55,6 +57,11 @@ export function ChartContainer(): React.ReactElement {
     const end = new Date().toISOString().slice(0, 10);
     void fetchKline(currentCode, currentMarket, currentPeriod, start, end);
   }, [currentCode, currentMarket, currentPeriod, displayDays, fetchKline, getStartDate]);
+
+  // Auto-load drawings when stock or period changes
+  useEffect(() => {
+    void loadDrawings(currentCode, currentPeriod);
+  }, [currentCode, currentPeriod, loadDrawings]);
 
   // Track rightOffset from timeScale drag and save to store (debounced)
   const rightOffsetSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);

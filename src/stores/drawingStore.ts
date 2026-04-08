@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+const API_BASE = 'http://localhost:8899';
+
 export interface DrawingPoint {
   time: number; // UTCTimestamp (seconds since epoch)
   price: number;
@@ -45,12 +47,18 @@ function genId(): string {
   return `drawing_${Date.now()}_${++_idCounter}`;
 }
 
+interface DrawingContext {
+  code: string;
+  period: string;
+}
+
 interface DrawingState {
   drawings: Drawing[];
   activeTool: DrawingToolType | null;
   activeStyle: DrawingStyle;
   selectedId: string | null;
   pendingPoints: DrawingPoint[];
+  context: DrawingContext | null;
 }
 
 interface DrawingActions {
@@ -63,14 +71,17 @@ interface DrawingActions {
   clearAll: () => void;
   selectDrawing: (id: string | null) => void;
   setDrawings: (drawings: Drawing[]) => void;
+  setContext: (code: string, period: string) => void;
+  loadDrawings: (code: string, period: string) => Promise<void>;
 }
 
-export const useDrawingStore = create<DrawingState & DrawingActions>((set) => ({
+export const useDrawingStore = create<DrawingState & DrawingActions>((set, get) => ({
   drawings: [],
   activeTool: null,
   activeStyle: DEFAULT_STYLE,
   selectedId: null,
   pendingPoints: [],
+  context: null,
 
   setActiveTool: (tool) => set({ activeTool: tool, pendingPoints: [] }),
 
@@ -84,19 +95,66 @@ export const useDrawingStore = create<DrawingState & DrawingActions>((set) => ({
 
   commitDrawing: (drawing) => {
     const id = genId();
+    const full: Drawing = { ...drawing, id };
     set((s) => ({
-      drawings: [...s.drawings, { ...drawing, id }],
+      drawings: [...s.drawings, full],
       pendingPoints: [],
     }));
+    // Persist async (fire-and-forget)
+    const ctx = get().context;
+    if (ctx) {
+      void fetch(
+        `${API_BASE}/api/drawings/${id}?stock_code=${encodeURIComponent(ctx.code)}&period=${encodeURIComponent(ctx.period)}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(full),
+        },
+      ).catch(() => undefined);
+    }
     return id;
   },
 
-  removeDrawing: (id) =>
-    set((s) => ({ drawings: s.drawings.filter((d) => d.id !== id) })),
+  removeDrawing: (id) => {
+    set((s) => ({ drawings: s.drawings.filter((d) => d.id !== id) }));
+    const ctx = get().context;
+    if (ctx) {
+      void fetch(
+        `${API_BASE}/api/drawings/${id}?stock_code=${encodeURIComponent(ctx.code)}&period=${encodeURIComponent(ctx.period)}`,
+        { method: 'DELETE' },
+      ).catch(() => undefined);
+    }
+  },
 
-  clearAll: () => set({ drawings: [] }),
+  clearAll: () => {
+    set({ drawings: [] });
+    const ctx = get().context;
+    if (ctx) {
+      void fetch(
+        `${API_BASE}/api/drawings?stock_code=${encodeURIComponent(ctx.code)}&period=${encodeURIComponent(ctx.period)}`,
+        { method: 'DELETE' },
+      ).catch(() => undefined);
+    }
+  },
 
   selectDrawing: (id) => set({ selectedId: id }),
 
   setDrawings: (drawings) => set({ drawings }),
+
+  setContext: (code, period) => set({ context: { code, period } }),
+
+  loadDrawings: async (code: string, period: string) => {
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/drawings?stock_code=${encodeURIComponent(code)}&period=${encodeURIComponent(period)}`,
+      );
+      if (res.ok) {
+        const drawings = (await res.json()) as Drawing[];
+        set({ drawings, context: { code, period } });
+      }
+    } catch {
+      // Backend may not be running in dev; silently ignore
+      set({ context: { code, period } });
+    }
+  },
 }));

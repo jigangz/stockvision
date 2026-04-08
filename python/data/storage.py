@@ -1,3 +1,4 @@
+import json
 import sqlite3
 from pathlib import Path
 from models.candle import Candle
@@ -122,6 +123,98 @@ def load_all_config() -> dict[str, str]:
     result = {row[0]: row[1] for row in cursor.fetchall()}
     conn.close()
     return result
+
+
+def init_drawings_table() -> None:
+    """Initialize SQLite drawings table."""
+    _ensure_dir()
+    conn = sqlite3.connect(str(DB_PATH))
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS drawings (
+            id TEXT NOT NULL,
+            stock_code TEXT NOT NULL,
+            period TEXT NOT NULL,
+            type TEXT NOT NULL,
+            points TEXT NOT NULL,
+            style TEXT NOT NULL,
+            text TEXT,
+            PRIMARY KEY (id, stock_code, period)
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def save_drawing(stock_code: str, period: str, drawing: dict) -> None:
+    """Upsert a drawing into SQLite."""
+    _ensure_dir()
+    init_drawings_table()
+    conn = sqlite3.connect(str(DB_PATH))
+    conn.execute(
+        """INSERT OR REPLACE INTO drawings (id, stock_code, period, type, points, style, text)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (
+            drawing["id"],
+            stock_code,
+            period,
+            drawing["type"],
+            json.dumps(drawing["points"]),
+            json.dumps(drawing["style"]),
+            drawing.get("text"),
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+
+def load_drawings(stock_code: str, period: str) -> list[dict]:
+    """Load all drawings for a stock/period."""
+    _ensure_dir()
+    init_drawings_table()
+    conn = sqlite3.connect(str(DB_PATH))
+    cursor = conn.execute(
+        "SELECT id, type, points, style, text FROM drawings WHERE stock_code = ? AND period = ?",
+        (stock_code, period),
+    )
+    drawings = []
+    for row in cursor.fetchall():
+        d: dict = {
+            "id": row[0],
+            "type": row[1],
+            "points": json.loads(row[2]),
+            "style": json.loads(row[3]),
+        }
+        if row[4] is not None:
+            d["text"] = row[4]
+        drawings.append(d)
+    conn.close()
+    return drawings
+
+
+def delete_drawing(drawing_id: str, stock_code: str, period: str) -> None:
+    """Delete a specific drawing."""
+    _ensure_dir()
+    init_drawings_table()
+    conn = sqlite3.connect(str(DB_PATH))
+    conn.execute(
+        "DELETE FROM drawings WHERE id = ? AND stock_code = ? AND period = ?",
+        (drawing_id, stock_code, period),
+    )
+    conn.commit()
+    conn.close()
+
+
+def clear_drawings(stock_code: str, period: str) -> None:
+    """Delete all drawings for a stock/period."""
+    _ensure_dir()
+    init_drawings_table()
+    conn = sqlite3.connect(str(DB_PATH))
+    conn.execute(
+        "DELETE FROM drawings WHERE stock_code = ? AND period = ?",
+        (stock_code, period),
+    )
+    conn.commit()
+    conn.close()
 
 
 def save_stock_list(stocks: list[dict]) -> None:

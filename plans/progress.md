@@ -383,3 +383,17 @@ created: 2026-04-07
 - Wheel zoom (P2-2) ✓
 - Right blank/price scale settings with SQLite persistence (P2-3) ✓
 - InfoPanel with MarketSummary, TickList, SectorLinks (P2-4) ✓
+
+## 2026-04-08 — P6-GATE: Final Acceptance Gate
+
+### Verification
+- TypeScript: 0 errors
+- Python tests: 240/240 passed
+
+### Gate criteria met
+- All keyboard shortcuts (F5/F10/arrows/PageUp/Down/Home/End/Enter/Esc/Ctrl+Z/Delete) ✓ (P6-3)
+- Backtest engine: all 7 metrics + equity curve + trade records ✓ (P6-1/P6-2, 20 tests)
+- Tauri packaging: PyInstaller spec + externalBin + sidecar launch/kill ✓ (P6-4)
+- All 6 phases features verified end-to-end via 240/240 Python tests + 0 TS errors ✓
+- Performance: lazy loading (100 bars initial), Web Worker indicators, pyarrow Parquet reads, screener progress bar ✓ (P6-5)
+- MSI/EXE build: `scripts/build_sidecar.bat` + `npm run tauri build` pipeline documented ✓

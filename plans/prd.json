@@ -242,8 +242,9 @@
         "All tools work in future blank + top blank areas"
       ],
       "priority": "medium",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "completed_at": "2026-04-08",
+      "notes": "DrawingCanvas.tsx: trendline extends to canvas edges; ray extends one direction; channel=3-click with parallel line; fibRetracement=7 levels (0/23.6/38.2/50/61.8/78.6/100%) with labels; gannAngle=3 lines (1x2/1x1/2x1) from anchor; rectangle semi-transparent fill; text=window.prompt dialog; buyMark/sellMark/flatMark=1-click B/S/= markers. Esc cancels pending. All use price-time coords."
     },
     {
       "id": "P3-4",

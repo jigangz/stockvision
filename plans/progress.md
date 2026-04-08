@@ -87,6 +87,27 @@ created: 2026-04-07
 - `<input type="color">` works natively in Tauri WebView, no library needed
 - The toolbar is positioned inside the K-line area div which already has `position: relative`
 
+## 2026-04-08 — P3-3: 各工具实现 (20+ tools)
+
+### What was built
+- **Trendline**: now extends through both p0 and p1 to canvas edges in both directions (via `extendLineFull`)
+- **Ray**: extends from p0 in direction of p1 to canvas edge (via `extendRay`)
+- **Channel**: 3-click tool — first two clicks define main trendline, third click defines parallel line offset (perpendicular projection). Dashed connecting lines shown for visual clarity
+- **Fibonacci retracement**: 2-click tool — draws 7 horizontal lines at 0/23.6/38.2/50/61.8/78.6/100% with percentage labels on right edge. 50% and 61.8% rendered in gold for emphasis
+- **Gann angle**: 2-click tool — anchor + direction click. Draws 3 lines (1×2, 1×1, 2×1) from anchor using canvas pixel slopes, labeled at ends
+- **Rectangle**: was already done (semi-transparent fill)
+- **Text**: 1-click + `window.prompt("输入文字:")` for text input; draws text with semi-transparent black background
+- **Buy/Sell/Flat marks**: 1-click tools — buyMark shows upward triangle with "B", sellMark shows downward triangle with "S", flatMark shows circle with "=" and horizontal bars
+- **Esc key**: cancels pending points first, then cancels active tool
+- **Preview**: channel shows parallel line preview when placing 3rd point; trendline/ray show extended preview
+
+### Key patterns learned
+- `extendRay(p0, dx, dy, w, h)` → finds canvas-edge intersection in given direction
+- `extendLineFull(p0, p1, w, h)` → extends line through both points to both canvas edges
+- Channel parallel offset = perpendicular projection of p2 onto the normal of p0→p1
+- `window.prompt()` works synchronously in Tauri WebView for text input
+- For 1-click marks (buyMark/sellMark/flatMark), use same pattern as horizontal/vertical
+
 ## 2026-04-08 — P2-GATE: Phase 2 Gate
 
 ### Verification

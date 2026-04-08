@@ -17,14 +17,20 @@ export interface IndicatorChartHandle {
   histSeries: ISeriesApi<'Histogram'> | null;
 }
 
+export interface FormulaSeries {
+  name: string;
+  data: { time: number; value: number }[];
+}
+
 interface IndicatorChartProps {
   candles: OhlcvData[];
+  formulaOverlay?: FormulaSeries[];
 }
 
 const LINE_COLORS = ['#FFFFFF', '#FFFF00', '#FF00FF', '#00FF00', '#FF8800', '#00CCFF'];
 
 export const IndicatorChart = forwardRef<IndicatorChartHandle, IndicatorChartProps>(
-  function IndicatorChart({ candles }, ref) {
+  function IndicatorChart({ candles, formulaOverlay }, ref) {
     const containerRef = useRef<HTMLDivElement>(null);
     const rightOffset = useChartSettingsStore((s) => s.rightOffset);
     const activeIndicator = useIndicatorStore((s) => s.activeIndicator);
@@ -37,6 +43,8 @@ export const IndicatorChart = forwardRef<IndicatorChartHandle, IndicatorChartPro
     const seriesRefs = useRef<ISeriesApi<'Line' | 'Histogram'>[]>([]);
     // First histogram series for handle (crosshair compat)
     const firstHistRef = useRef<ISeriesApi<'Histogram'> | null>(null);
+    // Formula overlay series
+    const formulaSeriesRefs = useRef<ISeriesApi<'Line'>[]>([]);
 
     useImperativeHandle(ref, () => ({
       get chart() { return chartRef.current; },
@@ -155,6 +163,31 @@ export const IndicatorChart = forwardRef<IndicatorChartHandle, IndicatorChartPro
       if (!chartRef.current) return;
       chartRef.current.applyOptions({ timeScale: { rightOffset } });
     }, [rightOffset]);
+
+    // Render formula overlay series
+    const FORMULA_COLORS = ['#FF8800', '#00CCFF', '#FF00FF', '#FFFF00', '#AAAAFF'];
+    useEffect(() => {
+      const chart = chartRef.current;
+      if (!chart) return;
+      // Remove old formula series
+      for (const s of formulaSeriesRefs.current) {
+        try { chart.removeSeries(s); } catch { /* ignore */ }
+      }
+      formulaSeriesRefs.current = [];
+      if (!formulaOverlay || formulaOverlay.length === 0) return;
+      formulaOverlay.forEach((fs, idx) => {
+        const line = chart.addLineSeries({
+          color: FORMULA_COLORS[idx % FORMULA_COLORS.length],
+          lineWidth: 1,
+          priceLineVisible: false,
+          lastValueVisible: true,
+          title: fs.name,
+        });
+        line.setData(fs.data.map((d) => ({ time: d.time as Time, value: d.value })) as LineData<Time>[]);
+        formulaSeriesRefs.current.push(line);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [formulaOverlay]);
 
     return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
   }

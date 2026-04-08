@@ -178,6 +178,22 @@ created: 2026-04-07
 - Annualized volatility = daily_return_std * sqrt(252) (convention for daily data)
 - Dialog reads candles directly from Zustand dataStore — no extra API call needed for candle data
 
+## 2026-04-08 — P4-3: 自定义公式引擎
+
+### What was built
+- **`python/data/formula_engine.py`**: lark LALR grammar for 通达信 formula syntax. Transformer evaluates expressions to numpy arrays. All 12 built-in functions (MA/EMA/SMA/REF/REFX/CROSS/LONGCROSS/HHV/LLV/COUNT/BARSLAST/SUM). 6 variables (OPEN/HIGH/LOW/CLOSE/VOL/AMOUNT). Multi-line formulas with `:=` assignment. `{comments}` supported. `parse_formula()` + `evaluate_formula()` public API.
+- **`python/api/formula.py`**: FastAPI router `POST /api/formula/validate` (syntax check only) and `POST /api/formula/evaluate` (evaluate + return series data). Registered in `main.py`.
+- **`src/components/chart/FormulaEditor.tsx`**: Modal dialog with Monaco Editor. Registers `tdxformula` language + `tdx-dark` theme with syntax highlighting. Real-time validation debounced 500ms. Execute button calls evaluate endpoint. Shows result summary.
+- **`src/components/chart/IndicatorChart.tsx`**: Added `formulaOverlay?: FormulaSeries[]` prop + `formulaSeriesRefs`. Formula results rendered as extra line series on the indicator sub-chart.
+- **`src/components/chart/ChartContainer.tsx`**: Added "公式" toolbar button, `showFormula`/`formulaOverlay` state, wires FormulaEditor dialog.
+- **`tests/python/test_formula.py`**: 35 tests (9 parse, 16 evaluate, 10 API).
+
+### Key patterns learned
+- Use lark LALR parser (not Earley) for formula grammars — Earley creates extremely deep trees causing Python stack overflow
+- lark `VisitError` wraps user exceptions from Transformer methods; unwrap with `e.orig_exc` check
+- Monaco `editor.updateOptions({language:})` is not valid; use `monaco.editor.setModelLanguage(editor.getModel(), ...)` instead
+- Formula results overlay works as additional LineSeries added/removed on the existing IndicatorChart instance via `formulaOverlay` prop
+
 ## 2026-04-08 — P2-GATE: Phase 2 Gate
 
 ### Verification

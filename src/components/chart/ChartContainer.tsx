@@ -12,6 +12,8 @@ import { DrawingCanvas } from '@/components/chart/DrawingCanvas';
 import { DrawingToolbar } from '@/components/chart/DrawingToolbar';
 import { IndicatorTabBar } from '@/components/chart/IndicatorTabBar';
 import { IntervalStatsDialog } from '@/components/chart/IntervalStatsDialog';
+import { FormulaEditor } from '@/components/chart/FormulaEditor';
+import type { FormulaSeries } from '@/components/chart/IndicatorChart';
 import { useDataStore } from '@/stores/dataStore';
 import { useChartStore } from '@/stores/chartStore';
 import { useCrosshairStore } from '@/stores/crosshairStore';
@@ -35,6 +37,8 @@ export function ChartContainer(): React.ReactElement {
   const [showSettings, setShowSettings] = useState(false);
   const [showPriceScale, setShowPriceScale] = useState(false);
   const [showIntervalStats, setShowIntervalStats] = useState(false);
+  const [showFormula, setShowFormula] = useState(false);
+  const [formulaOverlay, setFormulaOverlay] = useState<FormulaSeries[]>([]);
   const [drawingChart, setDrawingChart] = useState<IChartApi | null>(null);
   const [drawingSeries, setDrawingSeries] = useState<ISeriesApi<SeriesType> | null>(null);
 
@@ -208,6 +212,7 @@ export function ChartContainer(): React.ReactElement {
     >
       {/* Chart toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: 24, padding: '0 4px', background: 'var(--bg-secondary)', flexShrink: 0 }}>
+        <button style={toolbarBtnStyle} onClick={() => setShowFormula(true)}>公式</button>
         <button style={toolbarBtnStyle} onClick={() => setShowIntervalStats(true)}>区间统计</button>
         <button style={toolbarBtnStyle} onClick={() => setShowPriceScale(true)}>坐标</button>
         <button style={toolbarBtnStyle} onClick={() => setShowSettings(true)}>设置</button>
@@ -232,7 +237,7 @@ export function ChartContainer(): React.ReactElement {
       <div style={{ flex: '0 0 25%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         <IndicatorTabBar />
         <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-          <IndicatorChart ref={indicatorRef} candles={candles} />
+          <IndicatorChart ref={indicatorRef} candles={candles} formulaOverlay={formulaOverlay} />
           <Crosshair chartArea="indicator" />
         </div>
       </div>
@@ -240,6 +245,16 @@ export function ChartContainer(): React.ReactElement {
       {showSettings && <ChartSettingsDialog onClose={() => setShowSettings(false)} />}
       {showPriceScale && <PriceScaleDialog onClose={() => setShowPriceScale(false)} />}
       {showIntervalStats && <IntervalStatsDialog onClose={() => setShowIntervalStats(false)} />}
+      {showFormula && (
+        <FormulaEditor
+          candles={candles}
+          onClose={() => setShowFormula(false)}
+          onResult={(series) => {
+            setFormulaOverlay(series);
+            setShowFormula(false);
+          }}
+        />
+      )}
     </div>
   );
 }

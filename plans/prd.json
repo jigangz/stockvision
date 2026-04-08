@@ -319,8 +319,9 @@
         "Results overlay on main chart or sub chart"
       ],
       "priority": "medium",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "completed_at": "2026-04-08",
+      "notes": "lark LALR parser; formula_engine.py: MA/EMA/SMA/REF/REFX/CROSS/LONGCROSS/HHV/LLV/COUNT/BARSLAST/SUM + OPEN/HIGH/LOW/CLOSE/VOL/AMOUNT; POST /api/formula/validate + /evaluate; FormulaEditor.tsx: Monaco Editor with tdxformula language + tdx-dark theme, real-time validation debounced 500ms, execute button; results overlay on IndicatorChart via formulaOverlay prop; 35 Python tests pass"
     },
     {
       "id": "P4-GATE",

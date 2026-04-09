@@ -24,6 +24,8 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
 
     // Latest candles ref for DataLoader closure
     const candlesRef = useRef(useDataStore.getState().candles);
+    // Guard: skip candles useEffect re-render during lazy load to avoid chart reset mid-scroll
+    const isLazyLoadingRef = useRef(false);
 
     const candles = useDataStore((s) => s.candles);
     const zoomLevel = useChartStore((s) => s.zoomLevel);
@@ -87,12 +89,17 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
               callback([], false);
               return;
             }
-            const prevCount = store.candles.length;
-            await store.fetchMoreBars();
-            const next = useDataStore.getState();
-            const addedCount = next.candles.length - prevCount;
-            const olderBars = addedCount > 0 ? toKLineData(next.candles.slice(0, addedCount)) : [];
-            callback(olderBars, { backward: !next.allLoaded });
+            isLazyLoadingRef.current = true;
+            try {
+              const prevCount = store.candles.length;
+              await store.fetchMoreBars();
+              const next = useDataStore.getState();
+              const addedCount = next.candles.length - prevCount;
+              const olderBars = addedCount > 0 ? toKLineData(next.candles.slice(0, addedCount)) : [];
+              callback(olderBars, { backward: !next.allLoaded });
+            } finally {
+              isLazyLoadingRef.current = false;
+            }
           } else {
             callback(toKLineData(candlesRef.current), { backward: !store.allLoaded });
           }
@@ -108,13 +115,16 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Update candles ref and reload chart when candles change
+    // Update candles ref and reload chart when candles change (new stock selected)
     useEffect(() => {
       candlesRef.current = candles;
+      // Skip reload if lazy loading is in progress (fetchMoreBars triggered this update).
+      // Resetting DataLoader mid-lazy-load would reset the scroll position.
+      if (isLazyLoadingRef.current) return;
       const chart = chartRef.current;
       if (!chart || !candles.length) return;
 
-      // Re-set DataLoader to trigger chart reload with new data
+      // Re-set DataLoader to trigger chart reload with new stock data
       chart.setDataLoader({
         getBars: async ({ type, callback }) => {
           const store = useDataStore.getState();
@@ -123,12 +133,17 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
               callback([], false);
               return;
             }
-            const prevCount = store.candles.length;
-            await store.fetchMoreBars();
-            const next = useDataStore.getState();
-            const addedCount = next.candles.length - prevCount;
-            const olderBars = addedCount > 0 ? toKLineData(next.candles.slice(0, addedCount)) : [];
-            callback(olderBars, { backward: !next.allLoaded });
+            isLazyLoadingRef.current = true;
+            try {
+              const prevCount = store.candles.length;
+              await store.fetchMoreBars();
+              const next = useDataStore.getState();
+              const addedCount = next.candles.length - prevCount;
+              const olderBars = addedCount > 0 ? toKLineData(next.candles.slice(0, addedCount)) : [];
+              callback(olderBars, { backward: !next.allLoaded });
+            } finally {
+              isLazyLoadingRef.current = false;
+            }
           } else {
             callback(toKLineData(candlesRef.current), { backward: !store.allLoaded });
           }

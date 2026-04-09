@@ -654,3 +654,18 @@ See `docs/superpowers/plans/2026-04-09-klinechart-migration.md` (17 tasks, MIG-1
 - `chart.removeIndicator({ paneId })` removes all indicators from a pane by ID.
 - crosshairStore simplified: only `activeBarIndex` needed for keyboard nav — KLineChart handles visual crosshair natively.
 - DrawingContextMenu now receives `chart` prop from ChartContainer for overrideOverlay calls.
+
+## 2026-04-09 — MIG-15, MIG-16 (Iteration 3)
+
+### What was found / built
+- **MIG-15** (version bump): Already done — package.json, Cargo.toml, tauri.conf.json all already at 0.4.0.
+- **MIG-16** (DataLoader lazy loading): DataLoader was already wired with `type === 'backward'` check and `fetchMoreBars()` integration. Fixed a bug: added `isLazyLoadingRef` guard to prevent the candles useEffect from re-setting DataLoader while `fetchMoreBars()` is in-flight. Without this guard, the chart scroll position resets to the right edge each time older bars finish loading.
+
+### Key patterns learned
+- KLineChart `DataLoadType = "init" | "forward" | "backward" | "update"`. `backward` = user scrolled left = wants older historical data.
+- `DataLoadMore = boolean | { backward?: boolean; forward?: boolean }`. Pass `{ backward: !allLoaded }` to tell the chart whether there is more historical data to load.
+- `isLazyLoadingRef` pattern: set `true` before async fetch, `false` in finally block. Guards the candles useEffect from calling `setDataLoader` mid-lazy-load (which would reset scroll position).
+
+### Verification
+- TypeScript: 0 errors
+- MIG-GATE criteria: typecheck passes, no lightweight-charts in src/, all MIG tasks pass

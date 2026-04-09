@@ -6,7 +6,7 @@ interface CrosshairState {
   mouseY: number | null;
   priceAtY: number | null;
   timeLabel: string | null;
-  activeChart: "kline" | "volume" | "indicator" | null;
+  activeChart: "kline" | "volume" | "indicator" | "indicator2" | null;
   isKeyboardNavMode: boolean;
   setPosition: (data: Partial<CrosshairState>) => void;
   setKeyboardNavMode: (mode: boolean) => void;

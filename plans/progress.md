@@ -498,3 +498,17 @@ created: 2026-04-07
 - F6 toggle: registered in `useKeyboardShortcuts` (active in chart view) AND in `MarketTable` (active in market view). No conflict because only one of the two is mounted at a time.
 - Market code → SH/SZ: prefix '6' → SH, others → SZ.
 - `colorFn` on column definition returns numeric value; CSS var chosen via `colorVar(v)`.
+
+## 2026-04-08 — P9-GATE: Phase 9 Gate
+
+### Verification
+- TypeScript: 0 errors
+- Python tests: 265/265 passed
+
+### Gate criteria met
+- MarketTable renders all stocks with correct data (virtual scroll, 15 columns) ✓
+- Sorting works on all columns (click header to sort, click again to reverse) ✓
+- Watchlist stocks appear at top (pinned rows with yellow border) ✓
+- View switching between chart and market works (F6, 行情 button, Esc, double-click) ✓
+- Virtual scroll handles 5000+ rows smoothly (manual ROW_HEIGHT=26, OVERSCAN=8) ✓
+- TypeScript 0 errors ✓

@@ -135,7 +135,8 @@
       "id": "MIG-15",
       "title": "Version bump to 0.4.0",
       "priority": "low",
-      "passes": false,
+      "passes": true,
+      "completed_at": "2026-04-09",
       "plan_task": 15,
       "description": "Update version in package.json, Cargo.toml, tauri.conf.json from 0.3.1 to 0.4.0"
     },
@@ -143,7 +144,8 @@
       "id": "MIG-16",
       "title": "DataLoader integration for lazy loading",
       "priority": "high",
-      "passes": false,
+      "passes": true,
+      "completed_at": "2026-04-09",
       "plan_task": 16,
       "description": "Wire dataStore fetch functions to KLineChart DataLoader API in KLineChartWrapper per plan Task 16"
     },

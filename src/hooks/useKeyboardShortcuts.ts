@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { ActionType } from 'klinecharts';
 import type { KLineChartWrapperHandle } from '@/components/chart/KLineChartWrapper';
 import { useDataStore } from '@/stores/dataStore';
 import { useChartStore } from '@/stores/chartStore';
@@ -104,7 +105,7 @@ export function useKeyboardShortcuts({
         chart.scrollToDataIndex(nextIndex);
         const klineData = chart.getDataList();
         if (klineData[nextIndex]) {
-          chart.executeAction('onCrosshairChange', { dataIndex: nextIndex, kLineData: klineData[nextIndex] });
+          chart.executeAction(ActionType.OnCrosshairChange, { dataIndex: nextIndex, kLineData: klineData[nextIndex] });
         }
         useCrosshairStore.getState().setPosition({ activeBarIndex: nextIndex });
         e.preventDefault();

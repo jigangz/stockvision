@@ -32,7 +32,7 @@ export function StatusBar() {
         <span style={dotStyle(connected)} />
         <span>{connected ? 'AKShare' : '未连接'}</span>
       </div>
-      <span>StockVision v{__APP_VERSION__}</span>
+      <span>StockVision v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'}</span>
     </div>
   );
 }

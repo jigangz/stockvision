@@ -139,14 +139,8 @@ function EquityCurveChart({ equityCurve, initialCapital }: { equityCurve: Equity
       volume: 0,
     }));
 
-    // Feed data via DataLoader
-    chart.setSymbol({ ticker: 'equity', pricePrecision: 2, volumePrecision: 0 });
-    chart.setPeriod({ type: 'day', span: 1 });
-    chart.setDataLoader({
-      getBars: ({ callback }) => {
-        callback(klineData, false);
-      },
-    });
+    // v9: Push data directly
+    chart.applyNewData(klineData);
 
     // Add benchmark horizontal line overlay at initialCapital
     const firstTs = new Date(equityCurve[0].date).getTime();
@@ -154,9 +148,9 @@ function EquityCurveChart({ equityCurve, initialCapital }: { equityCurve: Equity
       name: 'horizontalStraightLine',
       points: [{ timestamp: firstTs, value: initialCapital }],
       styles: {
-        line: { color: '#FFFFFF', size: 1, style: 'dashed' },
+        line: { color: '#FFFFFF', size: 1 },
       },
-    });
+    } as never);
 
     return () => disposeKChart(el);
   }, [equityCurve, initialCapital]);

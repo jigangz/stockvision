@@ -1,5 +1,5 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { init, dispose } from 'klinecharts';
+import { init, dispose, ActionType } from 'klinecharts';
 import type { Chart } from 'klinecharts';
 import { useDataStore } from '@/stores/dataStore';
 import { useChartStore } from '@/stores/chartStore';
@@ -22,17 +22,9 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
     const upperPaneIdRef = useRef<string | null>(null);
     const lowerPaneIdRef = useRef<string | null>(null);
 
-    // Latest candles ref for DataLoader closure
-    const candlesRef = useRef(useDataStore.getState().candles);
-    // Guard: skip candles useEffect re-render during lazy load to avoid chart reset mid-scroll
-    const isLazyLoadingRef = useRef(false);
-
     const candles = useDataStore((s) => s.candles);
     const zoomLevel = useChartStore((s) => s.zoomLevel);
     const rightOffset = useChartSettingsStore((s) => s.rightOffset);
-    const priceScaleMode = useChartSettingsStore((s) => s.priceScaleMode);
-    const priceMin = useChartSettingsStore((s) => s.priceMin);
-    const priceMax = useChartSettingsStore((s) => s.priceMax);
     const activeIndicatorUpper = useIndicatorStore((s) => s.activeIndicatorUpper);
     const activeIndicatorLower = useIndicatorStore((s) => s.activeIndicatorLower);
     const upperParams = useIndicatorStore((s) => s.indicatorParams[s.activeIndicatorUpper]);
@@ -74,43 +66,28 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       lowerPaneIdRef.current = lowerPaneId;
 
       // Subscribe crosshair changes → crosshairStore
-      chart.subscribeAction('onCrosshairChange', (data) => {
+      chart.subscribeAction(ActionType.OnCrosshairChange, (data) => {
         const ch = data as { dataIndex?: number };
         if (ch?.dataIndex != null) {
           useCrosshairStore.getState().setPosition({ activeBarIndex: ch.dataIndex });
         }
       });
 
-      // DataLoader MUST be registered BEFORE setSymbol/setPeriod so that the
-      // initial data request finds a handler.
-      chart.setDataLoader({
-        getBars: async ({ type, callback }) => {
-          const store = useDataStore.getState();
-          if (type === 'backward') {
-            if (store.allLoaded || store.loadingMore) {
-              callback([], false);
-              return;
-            }
-            isLazyLoadingRef.current = true;
-            try {
-              const prevCount = store.candles.length;
-              await store.fetchMoreBars();
-              const next = useDataStore.getState();
-              const addedCount = next.candles.length - prevCount;
-              const olderBars = addedCount > 0 ? toKLineData(next.candles.slice(0, addedCount)) : [];
-              callback(olderBars, { backward: !next.allLoaded });
-            } finally {
-              isLazyLoadingRef.current = false;
-            }
-          } else {
-            // type === 'init' or 'forward'
-            const bars = toKLineData(candlesRef.current);
-            callback(bars, { backward: !store.allLoaded });
+      // v9: Register lazy loading callback for scrolling left
+      chart.loadMore((_timestamp) => {
+        const store = useDataStore.getState();
+        if (store.allLoaded || store.loadingMore) return;
+
+        const prevCount = store.candles.length;
+        void store.fetchMoreBars().then(() => {
+          const next = useDataStore.getState();
+          const addedCount = next.candles.length - prevCount;
+          if (addedCount > 0) {
+            const olderBars = toKLineData(next.candles.slice(0, addedCount));
+            chart.applyMoreData(olderBars, !next.allLoaded);
           }
-        },
+        });
       });
-      chart.setSymbol({ ticker: 'stock', pricePrecision: 2, volumePrecision: 0 });
-      chart.setPeriod({ type: 'day', span: 1 });
 
       return () => {
         dispose(el);
@@ -121,16 +98,13 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Update candles ref and reload chart when candles change (new stock selected)
+    // v9: Push data directly when candles change
     useEffect(() => {
-      candlesRef.current = candles;
-      if (isLazyLoadingRef.current) return;
       const chart = chartRef.current;
       if (!chart || !candles.length) return;
 
-      // Force DataLoader re-trigger by using a unique ticker each time.
-      // setSymbol with the same ticker is a no-op in KLineChart v10.
-      chart.setSymbol({ ticker: `stock-${Date.now()}`, pricePrecision: 2, volumePrecision: 0 });
+      const store = useDataStore.getState();
+      chart.applyNewData(toKLineData(candles), !store.allLoaded);
     }, [candles]);
 
     // Update upper indicator when selection changes
@@ -139,10 +113,9 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       const paneId = upperPaneIdRef.current;
       if (!chart || !paneId) return;
 
-      // Remove all indicators from this pane, then add the new one into the SAME pane
-      chart.removeIndicator({ paneId });
+      // v9: removeIndicator(paneId, name?) — removes all indicators from pane
+      chart.removeIndicator(paneId);
       const calcParams = upperParams ? Object.values(upperParams) : undefined;
-      // Use isStack=false with existing paneId to reuse the pane (not create a new one)
       chart.createIndicator(
         { name: activeIndicatorUpper, ...(calcParams ? { calcParams } : {}) },
         false,
@@ -156,7 +129,7 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       const paneId = lowerPaneIdRef.current;
       if (!chart || !paneId) return;
 
-      chart.removeIndicator({ paneId });
+      chart.removeIndicator(paneId);
       const calcParams = lowerParams ? Object.values(lowerParams) : undefined;
       chart.createIndicator(
         { name: activeIndicatorLower, ...(calcParams ? { calcParams } : {}) },
@@ -165,7 +138,7 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       );
     }, [activeIndicatorLower, lowerParams]);
 
-    // Handle zoom level — minimize/restore indicator panes
+    // Handle zoom level — minimize/restore indicator panes (v9 uses height trick)
     useEffect(() => {
       const chart = chartRef.current;
       if (!chart) return;
@@ -173,11 +146,12 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       const lowerPaneId = lowerPaneIdRef.current;
 
       if (zoomLevel >= 2) {
-        if (upperPaneId) chart.setPaneOptions({ id: upperPaneId, state: 'minimize' });
-        if (lowerPaneId) chart.setPaneOptions({ id: lowerPaneId, state: 'minimize' });
+        // v9: minimize by setting very small height
+        if (upperPaneId) chart.setPaneOptions({ id: upperPaneId, height: 0, minHeight: 0 });
+        if (lowerPaneId) chart.setPaneOptions({ id: lowerPaneId, height: 0, minHeight: 0 });
       } else {
-        if (upperPaneId) chart.setPaneOptions({ id: upperPaneId, state: 'normal', height: 100 });
-        if (lowerPaneId) chart.setPaneOptions({ id: lowerPaneId, state: 'normal', height: 100 });
+        if (upperPaneId) chart.setPaneOptions({ id: upperPaneId, height: 100, minHeight: 30 });
+        if (lowerPaneId) chart.setPaneOptions({ id: lowerPaneId, height: 100, minHeight: 30 });
       }
     }, [zoomLevel]);
 
@@ -185,45 +159,8 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
     useEffect(() => {
       const chart = chartRef.current;
       if (!chart) return;
-      // KLineChart uses pixel distance; approximate bar width ~8px
-      chart.scrollByDistance(0); // no-op to ensure chart is ready
+      chart.setOffsetRightDistance(rightOffset * 8);
     }, [rightOffset]);
-
-    // Apply manual price scale (Y-axis range override)
-    useEffect(() => {
-      const chart = chartRef.current;
-      if (!chart) return;
-
-      if (priceScaleMode === 'manual' && priceMin != null && priceMax != null) {
-        const min = Math.min(priceMin, priceMax);
-        const max = Math.max(priceMin, priceMax);
-        chart.setPaneOptions({
-          id: 'candle_pane',
-          axis: {
-            createRange: ({ defaultRange }) => ({
-              ...defaultRange,
-              from: min,
-              to: max,
-              range: max - min,
-              realFrom: min,
-              realTo: max,
-              realRange: max - min,
-              displayFrom: min,
-              displayTo: max,
-              displayRange: max - min,
-            }),
-          },
-        });
-      } else {
-        // Reset to auto — remove custom createRange by setting axis without it
-        chart.setPaneOptions({
-          id: 'candle_pane',
-          axis: {
-            createRange: undefined as never,
-          },
-        });
-      }
-    }, [priceScaleMode, priceMin, priceMax]);
 
     return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
   },

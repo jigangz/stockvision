@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { LineType } from 'klinecharts';
 import type { Chart } from 'klinecharts';
 import { useDrawingStore, type Drawing } from '@/stores/drawingStore';
 import { getOverlayName } from '@/chart/overlayMapping';
@@ -48,7 +49,7 @@ export function DrawingBridge({ chart }: DrawingBridgeProps): null {
     const overlayName = getOverlayName(activeTool);
     chart.createOverlay({
       name: overlayName,
-      onDrawEnd: (event) => {
+      onDrawEnd: (event: { overlay: { points: Array<{ timestamp?: number; value?: number }> } }): boolean => {
         const overlay = event.overlay;
         const points = overlay.points.map((p) => ({
           time: Math.floor((p.timestamp ?? 0) / 1000),
@@ -60,6 +61,7 @@ export function DrawingBridge({ chart }: DrawingBridgeProps): null {
           points,
           style: store.activeStyle,
         });
+        return true;
       },
     });
   }, [activeTool, chart]);
@@ -84,20 +86,23 @@ function createChartOverlay(chart: Chart, drawing: Drawing): void {
       line: {
         color: drawing.style.color,
         size: drawing.style.lineWidth,
-        style: drawing.style.lineStyle === 'dashed' ? 'dashed' : 'solid',
+        style: drawing.style.lineStyle === 'dashed' ? LineType.Dashed : LineType.Solid,
       },
     },
-    onRightClick: () => {
+    onRightClick: (): boolean => {
       useDrawingStore.getState().selectDrawing(drawing.id);
+      return false;
     },
-    onSelected: () => {
+    onSelected: (): boolean => {
       useDrawingStore.getState().selectDrawing(drawing.id);
+      return true;
     },
-    onDeselected: () => {
+    onDeselected: (): boolean => {
       const store = useDrawingStore.getState();
       if (store.selectedId === drawing.id) {
         store.selectDrawing(null);
       }
+      return true;
     },
   });
 }

@@ -81,9 +81,8 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
         }
       });
 
-      // Initial data load via DataLoader
-      chart.setSymbol({ ticker: 'stock', pricePrecision: 2, volumePrecision: 0 });
-      chart.setPeriod({ type: 'day', span: 1 });
+      // DataLoader MUST be registered BEFORE setSymbol/setPeriod so that the
+      // initial data request finds a handler.
       chart.setDataLoader({
         getBars: async ({ type, callback }) => {
           const store = useDataStore.getState();
@@ -104,10 +103,14 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
               isLazyLoadingRef.current = false;
             }
           } else {
-            callback(toKLineData(candlesRef.current), { backward: !store.allLoaded });
+            // type === 'init' or 'forward'
+            const bars = toKLineData(candlesRef.current);
+            callback(bars, { backward: !store.allLoaded });
           }
         },
       });
+      chart.setSymbol({ ticker: 'stock', pricePrecision: 2, volumePrecision: 0 });
+      chart.setPeriod({ type: 'day', span: 1 });
 
       return () => {
         dispose(el);

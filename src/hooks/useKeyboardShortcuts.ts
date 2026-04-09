@@ -66,7 +66,7 @@ export function useKeyboardShortcuts({
 
       const kChart = kRef.current?.chart;
 
-      // --- Esc: cancel drawing or close dialog ---
+      // --- Esc: cancel drawing, close dialog, or return to market view ---
       if (e.key === 'Escape') {
         const { activeTool, pendingPoints, setActiveTool, clearPending } = useDrawingStore.getState();
         if (pendingPoints.length > 0) {
@@ -82,6 +82,13 @@ export function useKeyboardShortcuts({
         if (dialogOpen) {
           closeDialog();
           e.preventDefault();
+          return;
+        }
+        // If in chart view, return to market view
+        const chartState = useChartStore.getState();
+        if (chartState.activeView === 'chart') {
+          chartState.setActiveView('market');
+          e.preventDefault();
         }
         return;
       }
@@ -92,6 +99,14 @@ export function useKeyboardShortcuts({
       if (e.key === 'F5') {
         e.preventDefault();
         refresh();
+        return;
+      }
+
+      // --- F6: toggle chart / market view ---
+      if (e.key === 'F6') {
+        e.preventDefault();
+        const chartState = useChartStore.getState();
+        chartState.setActiveView(chartState.activeView === 'chart' ? 'market' : 'chart');
         return;
       }
 

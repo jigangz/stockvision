@@ -708,8 +708,9 @@
         "Red/green coloring for positive/negative values"
       ],
       "priority": "high",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "src/components/market/MarketTable.tsx — virtual scroll (OVERSCAN=8), pinned rows with var(--ma5) border, all 15 columns, CSS-var colors",
+      "completed_at": "2026-04-08T21:30:00Z"
     },
     {
       "id": "P9-2",
@@ -722,8 +723,9 @@
         "Keyboard shortcut: some key (e.g. F6) toggles views"
       ],
       "priority": "high",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Toolbar.tsx has 行情 button; F6 handled in MainLayout+useKeyboardShortcuts; Esc→market in keyboard shortcuts; Esc→chart in MarketTable",
+      "completed_at": "2026-04-08T21:30:00Z"
     },
     {
       "id": "P9-GATE",

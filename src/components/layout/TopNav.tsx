@@ -1,4 +1,5 @@
 import { PeriodSelector } from '@/components/chart/PeriodSelector';
+import { Toolbar } from './Toolbar';
 
 const navStyles: Record<string, React.CSSProperties> = {
   nav: {
@@ -24,6 +25,7 @@ export function TopNav() {
     <nav style={navStyles.nav}>
       <span style={navStyles.stockCode}>000001 平安银行</span>
       <PeriodSelector />
+      <Toolbar />
     </nav>
   );
 }

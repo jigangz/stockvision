@@ -3,9 +3,9 @@ import { useQuotesStore, type QuoteData } from '../../stores/quotesStore';
 import { useWatchlistStore } from '../../stores/watchlistStore';
 import { useChartStore } from '../../stores/chartStore';
 
-const ROW_HEIGHT = 28;
-const HEADER_HEIGHT = 32;
-const OVERSCAN = 5;
+const ROW_HEIGHT = 26;
+const HEADER_HEIGHT = 28;
+const OVERSCAN = 8;
 
 type SortKey = keyof QuoteData | null;
 type SortDir = 'asc' | 'desc';
@@ -15,86 +15,134 @@ interface Column {
   label: string;
   width: number;
   align: 'left' | 'right';
-  format?: (val: number) => string;
   dataKey?: keyof QuoteData;
+  colorFn?: (row: QuoteData) => number;
 }
 
-function formatPrice(v: number): string {
+function fmt2(v: number): string {
   return v.toFixed(2);
 }
 
-function formatPct(v: number): string {
-  return v.toFixed(2) + '%';
+function fmtPct(v: number): string {
+  return (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
 }
 
-function formatVolume(v: number): string {
+function fmtVolume(v: number): string {
   if (v >= 1e8) return (v / 1e8).toFixed(2) + '亿';
   if (v >= 1e4) return (v / 1e4).toFixed(0) + '万';
   return String(v);
 }
 
-function formatAmount(v: number): string {
+function fmtAmount(v: number): string {
   if (v >= 1e8) return (v / 1e8).toFixed(2) + '亿';
   if (v >= 1e4) return (v / 1e4).toFixed(2) + '万';
   return v.toFixed(0);
 }
 
+function fmtPe(v: number): string {
+  return v > 0 ? v.toFixed(1) : '--';
+}
+
+function getMarket(code: string): 'SH' | 'SZ' {
+  return code[0] === '6' ? 'SH' : 'SZ';
+}
+
 const COLUMNS: Column[] = [
-  { key: 'index', label: '#序号', width: 50, align: 'right' },
-  { key: 'code', label: '代码', width: 75, align: 'left', dataKey: 'code' },
+  { key: 'index', label: '#', width: 44, align: 'right' },
+  { key: 'code', label: '代码', width: 72, align: 'left', dataKey: 'code' },
   { key: 'name', label: '名称', width: 80, align: 'left', dataKey: 'name' },
-  { key: 'change_pct', label: '涨幅%', width: 75, align: 'right', dataKey: 'change_pct', format: formatPct },
-  { key: 'price', label: '现价', width: 75, align: 'right', dataKey: 'price', format: formatPrice },
-  { key: 'change_amount', label: '涨跌', width: 70, align: 'right', dataKey: 'change_amount', format: formatPrice },
-  { key: 'volume', label: '总量', width: 80, align: 'right', dataKey: 'volume', format: formatVolume },
-  { key: 'amount', label: '成交额', width: 90, align: 'right', dataKey: 'amount', format: formatAmount },
-  { key: 'open', label: '今开', width: 70, align: 'right', dataKey: 'open', format: formatPrice },
-  { key: 'high', label: '最高', width: 70, align: 'right', dataKey: 'high', format: formatPrice },
-  { key: 'low', label: '最低', width: 70, align: 'right', dataKey: 'low', format: formatPrice },
-  { key: 'prev_close', label: '昨收', width: 70, align: 'right', dataKey: 'prev_close', format: formatPrice },
-  { key: 'turnover_rate', label: '换手%', width: 70, align: 'right', dataKey: 'turnover_rate', format: formatPct },
-  { key: 'pe_ratio', label: '市盈率', width: 75, align: 'right', dataKey: 'pe_ratio', format: formatPrice },
-  { key: 'amplitude', label: '振幅', width: 70, align: 'right', dataKey: 'amplitude', format: formatPct },
+  { key: 'change_pct', label: '涨幅%', width: 72, align: 'right', dataKey: 'change_pct', colorFn: (r) => r.change_pct },
+  { key: 'price', label: '现价', width: 70, align: 'right', dataKey: 'price', colorFn: (r) => r.change_pct },
+  { key: 'change_amount', label: '涨跌', width: 66, align: 'right', dataKey: 'change_amount', colorFn: (r) => r.change_amount },
+  { key: 'volume', label: '总量', width: 82, align: 'right', dataKey: 'volume' },
+  { key: 'amount', label: '成交额', width: 90, align: 'right', dataKey: 'amount' },
+  { key: 'open', label: '今开', width: 68, align: 'right', dataKey: 'open' },
+  { key: 'high', label: '最高', width: 68, align: 'right', dataKey: 'high', colorFn: (r) => r.high - r.prev_close },
+  { key: 'low', label: '最低', width: 68, align: 'right', dataKey: 'low', colorFn: (r) => r.low - r.prev_close },
+  { key: 'prev_close', label: '昨收', width: 68, align: 'right', dataKey: 'prev_close' },
+  { key: 'turnover_rate', label: '换手%', width: 68, align: 'right', dataKey: 'turnover_rate', colorFn: (r) => r.change_pct },
+  { key: 'pe_ratio', label: '市盈率', width: 68, align: 'right', dataKey: 'pe_ratio' },
+  { key: 'amplitude', label: '振幅', width: 60, align: 'right', dataKey: 'amplitude' },
 ];
 
-function getColorForValue(val: number): string {
-  if (val > 0) return '#FF4444';
-  if (val < 0) return '#00CC66';
-  return '#ccc';
+function renderValue(col: Column, row: QuoteData, rowIndex: number): string {
+  if (col.key === 'index') return String(rowIndex + 1);
+  if (!col.dataKey) return '';
+  const val = row[col.dataKey];
+  if (typeof val !== 'number') return String(val);
+  switch (col.key) {
+    case 'change_pct': return fmtPct(val);
+    case 'change_amount': return (val >= 0 ? '+' : '') + fmt2(val);
+    case 'volume': return fmtVolume(val);
+    case 'amount': return fmtAmount(val);
+    case 'pe_ratio': return fmtPe(val);
+    case 'turnover_rate': return val.toFixed(2) + '%';
+    case 'amplitude': return val.toFixed(2) + '%';
+    default: return fmt2(val);
+  }
+}
+
+function colorVar(v: number): string {
+  if (v > 0) return 'var(--color-up)';
+  if (v < 0) return 'var(--color-down)';
+  return 'var(--color-flat)';
 }
 
 const MarketTable: React.FC = () => {
   const quotes = useQuotesStore((s) => s.quotes);
   const loading = useQuotesStore((s) => s.loading);
-  const fetchAllQuotes = useQuotesStore((s) => s.fetchAllQuotes);
+  const startPolling = useQuotesStore((s) => s.startPolling);
+  const stopPolling = useQuotesStore((s) => s.stopPolling);
   const watchlistCodes = useWatchlistStore((s) => s.codes);
   const setCode = useChartStore((s) => s.setCode);
+  const setMarket = useChartStore((s) => s.setMarket);
   const setActiveView = useChartStore((s) => s.setActiveView);
 
   const [sortKey, setSortKey] = useState<SortKey>('change_pct');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [scrollTop, setScrollTop] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(600);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Start polling while market view is mounted
   useEffect(() => {
-    if (quotes.size === 0) {
-      void fetchAllQuotes();
-    }
-  }, [quotes.size, fetchAllQuotes]);
+    startPolling();
+    return () => stopPolling();
+  }, [startPolling, stopPolling]);
+
+  // Keyboard: F6 toggles view, Esc → chart view
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'F6') {
+        setActiveView('chart');
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [setActiveView]);
+
+  // Track container height for virtual scroll
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      setContainerHeight(el.clientHeight);
+    });
+    ro.observe(el);
+    setContainerHeight(el.clientHeight);
+    return () => ro.disconnect();
+  }, []);
 
   const watchlistSet = useMemo(() => new Set(watchlistCodes), [watchlistCodes]);
 
   const sortedRows = useMemo(() => {
     const all = Array.from(quotes.values());
-
     const watchlistRows: QuoteData[] = [];
     const otherRows: QuoteData[] = [];
     for (const q of all) {
-      if (watchlistSet.has(q.code)) {
-        watchlistRows.push(q);
-      } else {
-        otherRows.push(q);
-      }
+      if (watchlistSet.has(q.code)) watchlistRows.push(q);
+      else otherRows.push(q);
     }
 
     const compareFn = (a: QuoteData, b: QuoteData) => {
@@ -111,27 +159,14 @@ const MarketTable: React.FC = () => {
 
     watchlistRows.sort(compareFn);
     otherRows.sort(compareFn);
-
     return [...watchlistRows, ...otherRows];
   }, [quotes, watchlistSet, sortKey, sortDir]);
-
-  const watchlistCount = useMemo(
-    () => sortedRows.filter((r) => watchlistSet.has(r.code)).length,
-    [sortedRows, watchlistSet],
-  );
 
   const totalRows = sortedRows.length;
   const totalHeight = totalRows * ROW_HEIGHT;
 
-  const containerHeight = containerRef.current
-    ? containerRef.current.clientHeight - HEADER_HEIGHT
-    : 600;
-
   const visibleStart = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN);
-  const visibleEnd = Math.min(
-    totalRows,
-    Math.ceil((scrollTop + containerHeight) / ROW_HEIGHT) + OVERSCAN,
-  );
+  const visibleEnd = Math.min(totalRows, Math.ceil((scrollTop + containerHeight) / ROW_HEIGHT) + OVERSCAN);
 
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     setScrollTop(e.currentTarget.scrollTop);
@@ -151,41 +186,22 @@ const MarketTable: React.FC = () => {
   );
 
   const handleRowDoubleClick = useCallback(
-    (code: string) => {
-      setCode(code);
+    (row: QuoteData) => {
+      setCode(row.code);
+      setMarket(getMarket(row.code));
       setActiveView('chart');
     },
-    [setCode, setActiveView],
+    [setCode, setMarket, setActiveView],
   );
 
-  const renderCell = (col: Column, row: QuoteData, rowIndex: number) => {
-    if (col.key === 'index') {
-      return String(rowIndex + 1);
-    }
-    if (col.dataKey) {
-      const val = row[col.dataKey];
-      if (col.format && typeof val === 'number') {
-        return col.format(val);
-      }
-      return String(val);
-    }
-    return '';
-  };
-
-  const getCellColor = (col: Column, row: QuoteData): string => {
-    if (col.key === 'code' || col.key === 'name' || col.key === 'index') return '#ccc';
-    if (col.key === 'volume' || col.key === 'amount') return '#ccc';
-    if (col.key === 'prev_close') return '#ccc';
-    return getColorForValue(row.change_pct);
-  };
-
-  const visibleRows = [];
+  const visibleRowEls: React.ReactNode[] = [];
   for (let i = visibleStart; i < visibleEnd; i++) {
     const row = sortedRows[i];
     if (!row) continue;
-    const isWatchlist = watchlistSet.has(row.code);
+    const isPinned = watchlistSet.has(row.code);
+    const isEven = i % 2 === 0;
 
-    visibleRows.push(
+    visibleRowEls.push(
       <div
         key={row.code}
         style={{
@@ -196,41 +212,44 @@ const MarketTable: React.FC = () => {
           height: ROW_HEIGHT,
           display: 'flex',
           alignItems: 'center',
-          borderLeft: isWatchlist ? '4px solid #FFD700' : '4px solid transparent',
-          cursor: 'pointer',
-          transition: 'background 0.1s',
+          borderLeft: isPinned ? '3px solid var(--ma5)' : '3px solid transparent',
+          background: isEven ? 'var(--bg-primary)' : 'var(--bg-panel)',
+          cursor: 'default',
         }}
         onMouseEnter={(e) => {
-          (e.currentTarget as HTMLDivElement).style.background = '#1a1a2e';
+          (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-secondary)';
         }}
         onMouseLeave={(e) => {
-          (e.currentTarget as HTMLDivElement).style.background = 'transparent';
+          (e.currentTarget as HTMLDivElement).style.background = isEven
+            ? 'var(--bg-primary)'
+            : 'var(--bg-panel)';
         }}
-        onDoubleClick={() => handleRowDoubleClick(row.code)}
+        onDoubleClick={() => handleRowDoubleClick(row)}
       >
-        {COLUMNS.map((col) => (
-          <div
-            key={col.key}
-            style={{
-              width: col.width,
-              minWidth: col.width,
-              textAlign: col.align,
-              paddingRight: col.align === 'right' ? 8 : 0,
-              paddingLeft: col.align === 'left' ? 8 : 0,
-              fontSize: 13,
-              fontFamily:
-                col.key === 'name'
-                  ? 'inherit'
-                  : "'Consolas', 'Monaco', 'Courier New', monospace",
-              color: getCellColor(col, row),
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {renderCell(col, row, i)}
-          </div>
-        ))}
+        {COLUMNS.map((col) => {
+          const colorValue = col.colorFn ? col.colorFn(row) : null;
+          const color = colorValue !== null ? colorVar(colorValue) : 'var(--text-secondary)';
+          return (
+            <div
+              key={col.key}
+              style={{
+                width: col.width,
+                minWidth: col.width,
+                textAlign: col.align,
+                paddingRight: col.align === 'right' ? 6 : 0,
+                paddingLeft: col.align === 'left' ? 6 : 0,
+                fontSize: 12,
+                fontFamily: col.key === 'name' ? 'inherit' : 'Consolas, Monaco, monospace',
+                color,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {renderValue(col, row, i)}
+            </div>
+          );
+        })}
       </div>,
     );
   }
@@ -240,11 +259,11 @@ const MarketTable: React.FC = () => {
       style={{
         width: '100%',
         height: '100%',
-        background: '#000',
+        background: 'var(--bg-primary)',
         display: 'flex',
         flexDirection: 'column',
-        color: '#ccc',
-        fontSize: 13,
+        color: 'var(--text-secondary)',
+        fontSize: 12,
         userSelect: 'none',
       }}
     >
@@ -254,10 +273,10 @@ const MarketTable: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           height: HEADER_HEIGHT,
-          background: '#1a1a1a',
-          borderBottom: '1px solid #333',
+          background: 'var(--bg-secondary)',
+          borderBottom: '1px solid var(--border)',
           flexShrink: 0,
-          paddingLeft: 4,
+          paddingLeft: 3,
         }}
       >
         {COLUMNS.map((col) => (
@@ -268,12 +287,12 @@ const MarketTable: React.FC = () => {
               width: col.width,
               minWidth: col.width,
               textAlign: col.align,
-              paddingRight: col.align === 'right' ? 8 : 0,
-              paddingLeft: col.align === 'left' ? 8 : 0,
+              paddingRight: col.align === 'right' ? 6 : 0,
+              paddingLeft: col.align === 'left' ? 6 : 0,
               cursor: col.dataKey ? 'pointer' : 'default',
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: 600,
-              color: sortKey === col.dataKey ? '#FFD700' : '#999',
+              color: sortKey === col.dataKey ? 'var(--ma5)' : 'var(--text-muted)',
               whiteSpace: 'nowrap',
             }}
           >
@@ -283,24 +302,16 @@ const MarketTable: React.FC = () => {
         ))}
       </div>
 
-      {/* Watchlist separator */}
-      {watchlistCount > 0 && (
-        <div
-          style={{
-            height: 1,
-            background: '#FFD700',
-            opacity: 0.3,
-            flexShrink: 0,
-          }}
-        />
-      )}
-
       {/* Loading indicator */}
       {loading && quotes.size === 0 && (
-        <div style={{ padding: 20, textAlign: 'center', color: '#666' }}>加载中...</div>
+        <div
+          style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}
+        >
+          加载中...
+        </div>
       )}
 
-      {/* Virtual scroll container */}
+      {/* Virtual scroll body */}
       <div
         ref={containerRef}
         onScroll={handleScroll}
@@ -309,13 +320,16 @@ const MarketTable: React.FC = () => {
           overflowY: 'auto',
           overflowX: 'hidden',
           position: 'relative',
-          paddingLeft: 4,
+          paddingLeft: 0,
         }}
       >
-        <div style={{ height: totalHeight, position: 'relative' }}>{visibleRows}</div>
+        <div style={{ height: totalHeight, position: 'relative' }}>
+          {visibleRowEls}
+        </div>
       </div>
     </div>
   );
 };
 
+export { MarketTable };
 export default MarketTable;

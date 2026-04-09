@@ -49,3 +49,18 @@
   overflow-y: auto;
   padding: 8px;
 }
+
+.marketArea {
+  flex: 1;
+  overflow: auto;
+  background: var(--bg-primary);
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  font-size: 14px;
+}

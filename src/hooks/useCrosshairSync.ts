@@ -4,7 +4,7 @@ import { useCrosshairStore } from '@/stores/crosshairStore';
 import { useDataStore } from '@/stores/dataStore';
 
 interface ChartEntry {
-  key: 'kline' | 'volume' | 'indicator';
+  key: 'kline' | 'volume' | 'indicator' | 'indicator2';
   chart: IChartApi | null;
   /** A series on this chart, used for setCrosshairPosition */
   series: ISeriesApi<SeriesType> | null;

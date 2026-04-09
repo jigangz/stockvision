@@ -1,4 +1,4 @@
-import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { useEffect, useRef, useState, forwardRef, useImperativeHandle, useCallback } from 'react';
 import { useChartSettingsStore } from '@/stores/chartSettingsStore';
 import {
   createChart,
@@ -9,7 +9,14 @@ import {
   type Time,
 } from 'lightweight-charts';
 import type { OhlcvData } from '@/stores/dataStore';
-import { useIndicatorStore, type IndicatorSeries } from '@/stores/indicatorStore';
+import {
+  useIndicatorStore,
+  INDICATOR_DEFAULTS,
+  type IndicatorType,
+  type IndicatorSeries,
+  type IndicatorResult,
+} from '@/stores/indicatorStore';
+import { IndicatorParamsDialog } from './IndicatorParamsDialog';
 import { darkChartOptions } from '@/theme/darkTheme';
 
 type WorkerMessage =
@@ -28,31 +35,52 @@ export interface FormulaSeries {
 
 interface IndicatorChartProps {
   candles: OhlcvData[];
+  /** Which section this chart represents */
+  section: 'upper' | 'lower';
+  /** Whether this section is currently focused */
+  focused?: boolean;
+  /** Called when user clicks this section to focus it */
+  onFocus?: () => void;
   formulaOverlay?: FormulaSeries[];
 }
 
 const LINE_COLORS = ['#FFFFFF', '#FFFF00', '#FF00FF', '#00FF00', '#FF8800', '#00CCFF'];
 
+/** Format param values for header display, e.g. "(9,3,3)" */
+function formatParams(indicator: string, params?: Record<string, number>): string {
+  const defaults = INDICATOR_DEFAULTS[indicator];
+  if (!defaults || Object.keys(defaults).length === 0) return '';
+  const effective = params ?? defaults;
+  const vals = Object.keys(defaults).map((k) => effective[k] ?? defaults[k]);
+  return `(${vals.join(',')})`;
+}
+
 export const IndicatorChart = forwardRef<IndicatorChartHandle, IndicatorChartProps>(
-  function IndicatorChart({ candles, formulaOverlay }, ref) {
+  function IndicatorChart({ candles, section, focused: _focused, onFocus, formulaOverlay }, ref) {
     const containerRef = useRef<HTMLDivElement>(null);
     const rightOffset = useChartSettingsStore((s) => s.rightOffset);
-    const activeIndicator = useIndicatorStore((s) => s.activeIndicator);
-    const setIndicatorData = useIndicatorStore((s) => s.setIndicatorData);
-    const setLoading = useIndicatorStore((s) => s.setLoading);
-    const setError = useIndicatorStore((s) => s.setError);
+
+    // Pick indicator for this section
+    const activeIndicator = useIndicatorStore((s) =>
+      section === 'upper' ? s.activeIndicatorUpper : s.activeIndicatorLower,
+    );
+    const activeParams = useIndicatorStore((s) => s.indicatorParams[
+      section === 'upper' ? s.activeIndicatorUpper : s.activeIndicatorLower
+    ]);
 
     const chartRef = useRef<IChartApi | null>(null);
-    // Hidden anchor series to ensure timeScale always renders dates
     const anchorSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
-    // Dynamic series: array of line/histogram series instances
     const seriesRefs = useRef<ISeriesApi<'Line' | 'Histogram'>[]>([]);
-    // First histogram series for handle (crosshair compat)
     const firstHistRef = useRef<ISeriesApi<'Histogram'> | null>(null);
-    // Formula overlay series
     const formulaSeriesRefs = useRef<ISeriesApi<'Line'>[]>([]);
-    // Web Worker for off-main-thread indicator calculations
     const workerRef = useRef<Worker | null>(null);
+
+    // Local indicator data for this section (not shared via store)
+    const [localData, setLocalData] = useState<IndicatorResult | null>(null);
+    const [showParamsDialog, setShowParamsDialog] = useState(false);
+
+    // Header label text pieces: [{name, value, color}]
+    const [headerParts, setHeaderParts] = useState<{ label: string; color: string }[]>([]);
 
     useImperativeHandle(ref, () => ({
       get chart() { return chartRef.current; },
@@ -74,7 +102,6 @@ export const IndicatorChart = forwardRef<IndicatorChartHandle, IndicatorChartPro
 
       chartRef.current = chart;
 
-      // Hidden anchor series — carries time data so timeScale always renders dates
       const anchor = chart.addLineSeries({
         color: 'transparent',
         lineWidth: 1,
@@ -84,7 +111,6 @@ export const IndicatorChart = forwardRef<IndicatorChartHandle, IndicatorChartPro
       });
       anchorSeriesRef.current = anchor;
 
-      // Spawn indicator worker
       workerRef.current = new Worker(
         new URL('../../workers/indicator.worker.ts', import.meta.url),
         { type: 'module' },
@@ -100,7 +126,7 @@ export const IndicatorChart = forwardRef<IndicatorChartHandle, IndicatorChartPro
       };
     }, []);
 
-    // Feed candle times to anchor series so timeScale always shows dates
+    // Feed candle times to anchor series
     useEffect(() => {
       if (!candles.length || !anchorSeriesRef.current || !chartRef.current) return;
       const anchorData: LineData<Time>[] = candles.map((c) => ({
@@ -108,58 +134,20 @@ export const IndicatorChart = forwardRef<IndicatorChartHandle, IndicatorChartPro
         value: 0,
       }));
       anchorSeriesRef.current.setData(anchorData);
-      // Force time scale to recalculate visible range and render date labels
       chartRef.current.timeScale().fitContent();
     }, [candles]);
 
-    // Fetch indicator data via Web Worker when indicator or candles change
-    useEffect(() => {
-      if (!candles.length) return;
-      if (!chartRef.current) return;
-      const worker = workerRef.current;
-      if (!worker) return;
-
-      setLoading(true);
-      setError(null);
-
-      const candleData = candles.map((c) => ({
-        time: c.time,
-        open: c.open,
-        high: c.high,
-        low: c.low,
-        close: c.close,
-        volume: c.volume,
-      }));
-
-      // One-shot message handler for this request
-      const handleMessage = (e: MessageEvent<WorkerMessage>) => {
-        worker.removeEventListener('message', handleMessage);
-        if (e.data.type === 'result') {
-          setIndicatorData(e.data.data);
-          setLoading(false);
-          renderSeries(e.data.data.series);
-        } else {
-          setError(e.data.message);
-          setLoading(false);
-        }
-      };
-      worker.addEventListener('message', handleMessage);
-      worker.postMessage({ candles: candleData, indicator: activeIndicator });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeIndicator, candles]);
-
-    function renderSeries(seriesList: IndicatorSeries[]) {
+    // Render series on chart
+    const renderSeries = useCallback((seriesList: IndicatorSeries[]) => {
       const chart = chartRef.current;
       if (!chart) return;
 
-      // Remove old series
       for (const s of seriesRefs.current) {
         try { chart.removeSeries(s); } catch { /* ignore */ }
       }
       seriesRefs.current = [];
       firstHistRef.current = null;
 
-      // Add new series
       let colorIdx = 0;
       for (const s of seriesList) {
         if (s.type === 'histogram') {
@@ -192,7 +180,65 @@ export const IndicatorChart = forwardRef<IndicatorChartHandle, IndicatorChartPro
           seriesRefs.current.push(line);
         }
       }
-    }
+    }, []);
+
+    // Fetch indicator data via Web Worker
+    useEffect(() => {
+      if (!candles.length) return;
+      if (!chartRef.current) return;
+      const worker = workerRef.current;
+      if (!worker) return;
+
+      const candleData = candles.map((c) => ({
+        time: c.time,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+        volume: c.volume,
+      }));
+
+      const handleMessage = (e: MessageEvent<WorkerMessage>) => {
+        worker.removeEventListener('message', handleMessage);
+        if (e.data.type === 'result') {
+          setLocalData(e.data.data);
+          renderSeries(e.data.data.series);
+        }
+      };
+      worker.addEventListener('message', handleMessage);
+      worker.postMessage({ candles: candleData, indicator: activeIndicator, params: activeParams });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeIndicator, activeParams, candles, renderSeries]);
+
+    // Build header label from localData
+    useEffect(() => {
+      if (!localData || !localData.series.length) {
+        setHeaderParts([]);
+        return;
+      }
+      const paramStr = formatParams(activeIndicator, activeParams);
+      const parts: { label: string; color: string }[] = [
+        { label: `${activeIndicator}${paramStr}`, color: '#AAAAAA' },
+      ];
+      let colorIdx = 0;
+      for (const s of localData.series) {
+        // Get the last non-NaN value
+        let lastVal: number | undefined;
+        for (let i = s.data.length - 1; i >= 0; i--) {
+          if (s.data[i].value != null && !isNaN(s.data[i].value)) {
+            lastVal = s.data[i].value;
+            break;
+          }
+        }
+        if (lastVal === undefined) continue;
+        const color = s.type === 'histogram'
+          ? '#888888'
+          : (s.data[0]?.color ?? LINE_COLORS[colorIdx % LINE_COLORS.length]);
+        if (s.type !== 'histogram') colorIdx++;
+        parts.push({ label: `${s.name}: ${lastVal.toFixed(2)}`, color });
+      }
+      setHeaderParts(parts);
+    }, [localData, activeIndicator, activeParams]);
 
     // Apply rightOffset
     useEffect(() => {
@@ -205,7 +251,6 @@ export const IndicatorChart = forwardRef<IndicatorChartHandle, IndicatorChartPro
     useEffect(() => {
       const chart = chartRef.current;
       if (!chart) return;
-      // Remove old formula series
       for (const s of formulaSeriesRefs.current) {
         try { chart.removeSeries(s); } catch { /* ignore */ }
       }
@@ -225,6 +270,48 @@ export const IndicatorChart = forwardRef<IndicatorChartHandle, IndicatorChartPro
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [formulaOverlay]);
 
-    return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
+    const handleContextMenu = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onFocus?.();
+      setShowParamsDialog(true);
+    };
+
+    return (
+      <div
+        style={{ width: '100%', height: '100%', position: 'relative' }}
+        onClick={onFocus}
+        onContextMenu={handleContextMenu}
+      >
+        {/* Header label overlay */}
+        {headerParts.length > 0 && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 2,
+              left: 4,
+              zIndex: 5,
+              display: 'flex',
+              gap: 8,
+              fontSize: 11,
+              fontFamily: 'monospace',
+              pointerEvents: 'none',
+              userSelect: 'none',
+            }}
+          >
+            {headerParts.map((p, i) => (
+              <span key={i} style={{ color: p.color }}>{p.label}</span>
+            ))}
+          </div>
+        )}
+        <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+        {showParamsDialog && (
+          <IndicatorParamsDialog
+            indicator={activeIndicator as IndicatorType}
+            onClose={() => setShowParamsDialog(false)}
+          />
+        )}
+      </div>
+    );
   }
 );

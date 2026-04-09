@@ -2,7 +2,7 @@ import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 import type { IChartApi, ISeriesApi, SeriesType } from 'lightweight-charts';
 // DrawingCanvas chart/series refs are derived from candles to ensure charts are mounted
 import { KLineChart, type KLineChartHandle } from '@/components/chart/KLineChart';
-import { VolumeChart, type VolumeChartHandle } from '@/components/chart/VolumeChart';
+import type { VolumeChartHandle } from '@/components/chart/VolumeChart';
 import { IndicatorChart, type IndicatorChartHandle } from '@/components/chart/IndicatorChart';
 import { Crosshair } from '@/components/chart/Crosshair';
 import { InfoTooltip } from '@/components/chart/InfoTooltip';
@@ -173,8 +173,8 @@ export function ChartContainer(): React.ReactElement {
       },
       {
         key: 'volume' as const,
-        chart: volumeRef.current?.chart ?? null,
-        series: (volumeRef.current?.volumeSeries ?? null) as ISeriesApi<SeriesType> | null,
+        chart: indicatorUpperRef.current?.chart ?? null,
+        series: (indicatorUpperRef.current?.histSeries ?? null) as ISeriesApi<SeriesType> | null,
       },
       {
         key: 'indicator' as const,

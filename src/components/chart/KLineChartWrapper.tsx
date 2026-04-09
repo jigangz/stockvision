@@ -80,9 +80,22 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       chart.setSymbol({ ticker: 'stock', pricePrecision: 2, volumePrecision: 0 });
       chart.setPeriod({ type: 'day', span: 1 });
       chart.setDataLoader({
-        getBars: ({ callback }) => {
-          const klineData = toKLineData(candlesRef.current);
-          callback(klineData, false);
+        getBars: async ({ type, callback }) => {
+          const store = useDataStore.getState();
+          if (type === 'backward') {
+            if (store.allLoaded || store.loadingMore) {
+              callback([], false);
+              return;
+            }
+            const prevCount = store.candles.length;
+            await store.fetchMoreBars();
+            const next = useDataStore.getState();
+            const addedCount = next.candles.length - prevCount;
+            const olderBars = addedCount > 0 ? toKLineData(next.candles.slice(0, addedCount)) : [];
+            callback(olderBars, { backward: !next.allLoaded });
+          } else {
+            callback(toKLineData(candlesRef.current), { backward: !store.allLoaded });
+          }
         },
       });
 
@@ -103,8 +116,22 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
 
       // Re-set DataLoader to trigger chart reload with new data
       chart.setDataLoader({
-        getBars: ({ callback }) => {
-          callback(toKLineData(candlesRef.current), false);
+        getBars: async ({ type, callback }) => {
+          const store = useDataStore.getState();
+          if (type === 'backward') {
+            if (store.allLoaded || store.loadingMore) {
+              callback([], false);
+              return;
+            }
+            const prevCount = store.candles.length;
+            await store.fetchMoreBars();
+            const next = useDataStore.getState();
+            const addedCount = next.candles.length - prevCount;
+            const olderBars = addedCount > 0 ? toKLineData(next.candles.slice(0, addedCount)) : [];
+            callback(olderBars, { backward: !next.allLoaded });
+          } else {
+            callback(toKLineData(candlesRef.current), { backward: !store.allLoaded });
+          }
         },
       });
     }, [candles]);

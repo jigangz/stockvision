@@ -48,6 +48,7 @@ export function useCrosshairSync(entries: ChartEntry[]) {
         activeChart: source.key,
         activeBarIndex: barIndex >= 0 ? barIndex : null,
         priceAtY,
+        isKeyboardNavMode: false,
       });
 
       // Sync crosshair to other charts

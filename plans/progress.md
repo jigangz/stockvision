@@ -547,11 +547,14 @@ created: 2026-04-07
 - LW Charts `setCrosshairPosition` automatically highlights the time axis date and triggers crosshair sync hook
 - `clearCrosshairPosition()` is the LW Charts API to programmatically remove crosshair
 
-## 2026-04-08 — P10-GATE: Phase 10 Gate
+## 2026-04-08 — P10-GATE + Iteration 4 fixes
 
-### What was fixed
-- **`src/hooks/useKeyboardShortcuts.ts`**: Added `volumeRef` and `indicatorRef` to `Options` interface and destructuring. Added crosshair sync to volume/indicator charts during keyboard navigation. Removed non-existent `setKeyboardNavMode` call.
-- **`src/hooks/useCrosshairSync.ts`**: Removed non-existent `isKeyboardNavMode` field from `setPosition` call.
+### What was fixed in iteration 4
+- **`src/stores/crosshairStore.ts`**: Added `isKeyboardNavMode: boolean` + `setKeyboardNavMode` action to CrosshairState.
+- **`src/hooks/useKeyboardShortcuts.ts`**: Added `volumeRef`/`indicatorRef` params + explicit crosshair sync to volume+indicator charts. Calls `setKeyboardNavMode(true)` on arrow nav.
+- **`src/hooks/useCrosshairSync.ts`**: Sets `isKeyboardNavMode: false` in setPosition when mouse drives crosshair.
+- **`src/components/chart/KeyboardWizard.tsx`**: Fixed API response shape (`data.stocks` not `data` — API returns `{stocks:[...]}`).
+- **`src/components/chart/ChartContainer.tsx`**: Passes `volumeRef`+`indicatorRef` to `useKeyboardShortcuts`.
 
 ### Verification
 - TypeScript: 0 errors

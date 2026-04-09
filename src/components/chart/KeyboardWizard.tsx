@@ -16,8 +16,9 @@ async function fetchStocks(): Promise<StockItem[]> {
   if (fetchPromise) return fetchPromise;
   fetchPromise = fetch('http://localhost:8899/api/data/stocks')
     .then((r) => r.json())
-    .then((data: { code: string; name: string; market: string }[]) => {
-      stockCache = data.map((s) => ({
+    .then((data: { stocks: { code: string; name: string; market: string }[] }) => {
+      const list = data.stocks ?? [];
+      stockCache = list.map((s) => ({
         code: s.code,
         name: s.name,
         market: (s.market === 'SH' ? 'SH' : 'SZ') as 'SH' | 'SZ',

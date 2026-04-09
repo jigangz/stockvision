@@ -757,8 +757,8 @@
       ],
       "priority": "high",
       "passes": true,
-      "notes": "KeyboardWizard.tsx: module-level stock cache, digit key opens popup bottom-right, filters by code prefix + name substring, arrow/enter/esc navigation. Added to MainLayout.tsx. Input focus check via inInput guard.",
-      "completed_at": "2026-04-08T22:30:00Z"
+      "notes": "KeyboardWizard.tsx: module-level stock cache (fetches /api/data/stocks with correct {stocks:[]} shape), digit key opens popup bottom-right, filters by code prefix + name substring, arrow/enter/esc navigation, input focus guard. Added to MainLayout.tsx.",
+      "completed_at": "2026-04-08T23:00:00Z"
     },
     {
       "id": "P10-2",
@@ -775,8 +775,8 @@
       ],
       "priority": "high",
       "passes": true,
-      "notes": "useKeyboardShortcuts.ts: keyboardNavRef tracks nav mode. Arrow keys initialize to last bar, auto-scroll via setVisibleLogicalRange when bar near edges. mousemove/click clears crosshair and exits nav mode. setCrosshairPosition drives crosshair+timeaxis+InfoTooltip update.",
-      "completed_at": "2026-04-08T22:30:00Z"
+      "notes": "useKeyboardShortcuts: volumeRef+indicatorRef added for multi-chart crosshair sync. isKeyboardNavMode in crosshairStore. Auto-scroll via setVisibleLogicalRange at margins. mousemove/click calls setKeyboardNavMode(false)+clear(). setCrosshairPosition on all 3 charts on arrow key press.",
+      "completed_at": "2026-04-08T23:00:00Z"
     },
     {
       "id": "P10-GATE",
@@ -791,8 +791,8 @@
       ],
       "priority": "high",
       "passes": true,
-      "notes": "PHASE GATE - Final gate for v0.3",
-      "completed_at": "2026-04-08"
+      "notes": "PHASE GATE — TypeScript 0 errors, Python 265/265 tests passed. KeyboardWizard + arrow nav + crosshair sync across 3 charts verified.",
+      "completed_at": "2026-04-08T23:00:00Z"
     }
   ]
 }

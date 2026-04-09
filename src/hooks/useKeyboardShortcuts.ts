@@ -237,6 +237,7 @@ export function useKeyboardShortcuts({
         }
 
         useCrosshairStore.getState().setPosition({ activeBarIndex: nextIndex });
+        useCrosshairStore.getState().setKeyboardNavMode(true);
         e.preventDefault();
         return;
       }

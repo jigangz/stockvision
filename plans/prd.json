@@ -574,6 +574,211 @@
       "passes": true,
       "completed_at": "2026-04-08",
       "notes": "修复轮 Gate: FIX-1 (20+ drawing tools), FIX-2 (sync/import endpoints), FIX-3 (keyboard shortcuts), FIX-4 (TopNav 60px) all pass. 0 TS errors, 253/253 tests pass."
+    },
+    {
+      "id": "P7-1",
+      "title": "Backend: GET /api/data/quotes real-time quotes endpoint",
+      "acceptanceCriteria": [
+        "New quotes.py router with GET /api/data/quotes",
+        "AKShare stock_zh_a_spot_em() wrapped with 30s in-memory cache",
+        "Returns per stock: code, name, price, change_pct, change_amount, volume, amount, open, prev_close, high, low, turnover_rate, pe_ratio, amplitude, quantity_ratio",
+        "MockAdapter fallback generates fake quotes for 8 mock stocks",
+        "Tests: test_quotes_endpoint returns 200 with expected fields"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P7-2",
+      "title": "Backend: GET/PUT /api/config/watchlist endpoint",
+      "acceptanceCriteria": [
+        "GET /api/config/watchlist returns JSON array of stock codes",
+        "PUT /api/config/watchlist accepts {codes:[...]} body and persists to config store",
+        "Default empty array if no watchlist saved",
+        "Tests: test_watchlist_crud (get empty, put list, get back same list)"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P7-GATE",
+      "title": "Phase 7 Gate: Backend APIs for quotes + watchlist",
+      "acceptanceCriteria": [
+        "GET /api/data/quotes returns valid data",
+        "GET/PUT /api/config/watchlist CRUD works",
+        "MockAdapter fallback works when AKShare unavailable",
+        "All new tests pass",
+        "TypeScript 0 errors"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": "PHASE GATE"
+    },
+    {
+      "id": "P8-1",
+      "title": "Frontend: watchlistStore + quotesStore",
+      "acceptanceCriteria": [
+        "watchlistStore: codes[], add/remove/toggle, fetchWatchlist/saveWatchlist to backend",
+        "quotesStore: quotes Map<code, QuoteData>, fetchAllQuotes(), 30s polling with setInterval",
+        "chartStore: add activeView: 'chart'|'market' state + setActiveView action",
+        "TypeScript 0 errors"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P8-2",
+      "title": "Frontend: WatchlistSidebar component",
+      "acceptanceCriteria": [
+        "Left sidebar ~160px inside MainLayout chartArea",
+        "Each row: stock name, current price, change% with red/green coloring",
+        "Click row switches current stock (chartStore.setCode)",
+        "Current stock row highlighted with accent background",
+        "Collapsible: toggle button hides/shows sidebar",
+        "Data from quotesStore"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P8-3",
+      "title": "Frontend: StockInfoPanel component (right side detail)",
+      "acceptanceCriteria": [
+        "Right panel ~200px showing current stock detail",
+        "Shows: stock code + name header",
+        "Latest price in large font, change amount + change% below",
+        "Grid: 今开/昨收/最高/最低/成交量/成交额/换手率/市盈率/振幅/量比",
+        "Red/green coloring based on up/down",
+        "Data from quotesStore for current stock"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P8-4",
+      "title": "Frontend: Watchlist star button in toolbar",
+      "acceptanceCriteria": [
+        "Star button (⭐自选) in toolbar row next to 画线",
+        "Yellow/highlighted when current stock is in watchlist",
+        "Default color when not in watchlist",
+        "Click toggles add/remove via watchlistStore.toggle()",
+        "Tooltip: 加入自选 or 移出自选"
+      ],
+      "priority": "medium",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P8-GATE",
+      "title": "Phase 8 Gate: Sidebar + Info panel + Watchlist working",
+      "acceptanceCriteria": [
+        "Watchlist sidebar renders with live quote data",
+        "Info panel shows correct current stock details",
+        "Star button toggles watchlist membership and persists",
+        "Layout: sidebar | chart | info panel renders correctly",
+        "TypeScript 0 errors"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": "PHASE GATE"
+    },
+    {
+      "id": "P9-1",
+      "title": "Frontend: MarketTable component (行情列表页)",
+      "acceptanceCriteria": [
+        "Full-screen table view when activeView='market'",
+        "Columns: #, 代码, 名称, 涨幅%, 现价, 涨跌, 总量, 成交额, 今开, 最高, 最低, 昨收, 换手%, 市盈率, 振幅",
+        "Watchlist stocks pinned to top with yellow left-border marker",
+        "Virtual scrolling for 5000+ rows (calculate visible rows, absolute positioning)",
+        "Column header click sorts ascending/descending with sort indicator",
+        "Double-click row enters K-line view for that stock",
+        "Red/green coloring for positive/negative values"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P9-2",
+      "title": "Frontend: View switching (chart <-> market) + 行情 button",
+      "acceptanceCriteria": [
+        "TopNav or toolbar has 行情 button to switch to market table view",
+        "Esc from K-line chart view returns to market table",
+        "Double-click in market table enters K-line chart for that stock",
+        "View state managed by chartStore.activeView",
+        "Keyboard shortcut: some key (e.g. F6) toggles views"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P9-GATE",
+      "title": "Phase 9 Gate: Market table fully functional",
+      "acceptanceCriteria": [
+        "Market table renders all stocks with correct data",
+        "Sorting works on all columns",
+        "Watchlist stocks appear at top",
+        "View switching between chart and market works",
+        "Virtual scroll handles 5000+ rows smoothly",
+        "TypeScript 0 errors"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": "PHASE GATE"
+    },
+    {
+      "id": "P10-1",
+      "title": "Frontend: KeyboardWizard component (键盘精灵)",
+      "acceptanceCriteria": [
+        "Global keydown listener: digit input triggers popup at bottom-right corner",
+        "Fetches /api/data/stocks once and caches in memory",
+        "Matches by stock code prefix and stock name substring",
+        "Dropdown list shows: code + name + market (上海A股/深圳A股/创业板)",
+        "Up/Down arrows navigate list, Enter confirms, Esc closes",
+        "Confirm sets chartStore code/market and switches to chart view",
+        "Does not trigger when other dialogs are open or input fields focused"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P10-2",
+      "title": "Frontend: K-line keyboard navigation (←/→ arrow keys)",
+      "acceptanceCriteria": [
+        "Left arrow moves crosshair to previous candle",
+        "Right arrow moves crosshair to next candle",
+        "Crosshair vertical line snaps to candle center, horizontal to close price",
+        "InfoTooltip updates with that candle's date + OHLCV data",
+        "Time axis highlights the navigated date with blue/accent background",
+        "Auto-scrolls visible range when reaching edges",
+        "Mouse movement or click exits keyboard navigation mode",
+        "Works correctly with existing crosshair sync across 3 charts"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "P10-GATE",
+      "title": "Phase 10 Gate: Full integration - keyboard wizard + navigation",
+      "acceptanceCriteria": [
+        "Keyboard wizard works from both chart and market views",
+        "K-line arrow navigation shows correct OHLCV data per bar",
+        "Time axis date highlight visible on navigation",
+        "All views integrate: sidebar + chart/market + info panel",
+        "No regressions in existing drawing/indicator/backtest features",
+        "TypeScript 0 errors, all Python tests pass"
+      ],
+      "priority": "high",
+      "passes": false,
+      "notes": "PHASE GATE - Final gate for v0.3"
     }
   ]
 }

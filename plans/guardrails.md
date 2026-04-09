@@ -100,10 +100,26 @@ Learned constraints that prevent repeated failures. Each "sign" is a rule discov
 
 Add signs below as you encounter project-specific failure patterns:
 
-<!-- Example format:
-### SIGN-XXX: [Descriptive Name]
-**Trigger:** [When this sign applies]
-**Instruction:** [What to do instead]
-**Reason:** [Why this matters]
-**Added after:** [Iteration N / date when learned]
--->
+### SIGN-030: Virtual Scroll — No External Dependencies
+**Trigger:** Implementing market table with 5000+ rows
+**Instruction:** Use manual virtual scrolling (calculate visible rows from scroll position + row height, position with absolute/transform). Do NOT add react-virtual, react-window, or any external virtual scroll library.
+**Reason:** Minimal dependencies policy. The math is simple: visibleStart = floor(scrollTop / rowHeight), render only visible rows.
+**Added after:** v0.3 planning, 2026-04-08
+
+### SIGN-031: Quotes Cache — Backend Not Frontend
+**Trigger:** Fetching real-time quotes
+**Instruction:** Cache quotes on the backend (30s TTL in-memory). Frontend polls backend every 30s. Don't cache in localStorage or duplicate caching logic.
+**Reason:** Single source of truth. AKShare rate limits are enforced server-side.
+**Added after:** v0.3 planning, 2026-04-08
+
+### SIGN-032: Keyboard Events — Check Focus Target
+**Trigger:** Adding global keyboard listeners (keyboard wizard, arrow navigation)
+**Instruction:** Always check `document.activeElement` before handling keydown. Skip if an input/textarea/select is focused, or if a dialog is open (anyDialogOpen flag).
+**Reason:** Keyboard wizard should not trigger while user is typing in a text field or dialog.
+**Added after:** v0.3 planning, 2026-04-08
+
+### SIGN-033: Flex Layout — Account for Fixed Elements
+**Trigger:** Adding sidebar or panels to existing flex layout
+**Instruction:** When adding fixed-width sidebars (watchlist 160px, info panel 200px), the chart area must use flex:1 to fill remaining space. Don't use percentage widths that don't account for sidebars.
+**Reason:** Previous bug: 55%+20%+25% flex-basis + 24px toolbar = overflow. Use flex-grow ratios, not percentages.
+**Added after:** v0.3 planning, 2026-04-08

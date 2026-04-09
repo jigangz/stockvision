@@ -34,6 +34,15 @@
     ],
     "externalBin": [
       "binaries/python-backend"
-    ]
+    ],
+    "createUpdaterArtifacts": "v1Compatible"
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEE1MDBEMDAzODlDNDIxOTQKUldTVUljU0pBOUFBcGNZaE05RTRjNjRqbG1ERXl3a3MvWkZLOGdkM3pES1VCcFg1VmZjWDRrV1QK",
+      "endpoints": [
+        "https://github.com/jigangz/stockvision/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

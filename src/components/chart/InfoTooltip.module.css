@@ -1,7 +1,5 @@
 .tooltip {
   position: absolute;
-  top: 8px;
-  left: 8px;
   z-index: 20;
   background: rgba(30, 0, 0, 0.9);
   border: 1px solid #FF4444;
@@ -11,6 +9,7 @@
   pointer-events: none;
   font-family: 'Consolas', 'Microsoft YaHei', monospace;
   font-size: 12px;
+  transition: left 0.05s, top 0.05s;
 }
 
 .header {

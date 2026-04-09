@@ -4,7 +4,11 @@ Used when running as a Tauri sidecar binary (no reload mode).
 """
 import sys
 import os
+import logging
 from pathlib import Path
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("stockvision")
 
 # Ensure the package root is on sys.path (needed for PyInstaller one-file mode)
 _pkg_root = str(Path(__file__).parent)
@@ -31,6 +35,7 @@ from api.heatmap import router as heatmap_router
 from api.capital_flow import router as capital_flow_router
 from api.datasource import router as datasource_router
 from api.backtest import router as backtest_router
+from api.health_monitor import router as health_monitor_router
 from data.mock_adapter import MockAdapter
 
 app = FastAPI(title="StockVision API", version="0.1.0")
@@ -43,7 +48,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-adapter = MockAdapter()
+# --- Adapter init: try AKShare first, fallback to Mock ---
+_adapter_name = "MockAdapter"
+_adapter_env = os.environ.get("STOCKVISION_ADAPTER", "akshare").lower()
+
+if _adapter_env == "mock":
+    adapter = MockAdapter()
+    logger.info("Using MockAdapter (forced via STOCKVISION_ADAPTER=mock)")
+else:
+    try:
+        from data.akshare_adapter import AkshareAdapter
+        adapter = AkshareAdapter()
+        import akshare  # noqa: F401
+        _adapter_name = "AkshareAdapter"
+        logger.info("Using AkshareAdapter (real market data)")
+    except Exception as e:
+        logger.warning(f"AKShare unavailable ({e}), falling back to MockAdapter")
+        adapter = MockAdapter()
+
 set_adapter(adapter)
 
 app.include_router(data_router)
@@ -57,11 +79,12 @@ app.include_router(heatmap_router)
 app.include_router(capital_flow_router)
 app.include_router(datasource_router)
 app.include_router(backtest_router)
+app.include_router(health_monitor_router)
 
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "adapter": type(adapter).__name__}
+    return {"status": "ok", "adapter": _adapter_name}
 
 
 if __name__ == "__main__":

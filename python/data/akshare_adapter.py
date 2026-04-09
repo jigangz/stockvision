@@ -1,5 +1,29 @@
+import time
+import logging
 from data.adapter import DataAdapter
 from models.candle import Candle
+
+logger = logging.getLogger("stockvision.akshare")
+
+# Retry config
+MAX_RETRIES = 3
+RETRY_DELAY = 2  # seconds between retries
+
+
+def _retry(fn, description: str = "akshare call"):
+    """Call fn() with retries. Raises on final failure."""
+    last_err = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            return fn()
+        except Exception as e:
+            last_err = e
+            if attempt < MAX_RETRIES:
+                logger.warning(f"{description} attempt {attempt}/{MAX_RETRIES} failed: {e}, retrying in {RETRY_DELAY}s...")
+                time.sleep(RETRY_DELAY)
+            else:
+                logger.error(f"{description} failed after {MAX_RETRIES} attempts: {e}")
+    raise RuntimeError(f"{description} failed after {MAX_RETRIES} retries: {last_err}")
 
 
 class AkshareAdapter(DataAdapter):
@@ -9,6 +33,17 @@ class AkshareAdapter(DataAdapter):
         "daily": "daily",
         "weekly": "weekly",
         "monthly": "monthly",
+    }
+
+    # AKShare returns Chinese column names from 东方财富
+    COL_MAP = {
+        "日期": "date",
+        "开盘": "open",
+        "收盘": "close",
+        "最高": "high",
+        "最低": "low",
+        "成交量": "volume",
+        "成交额": "amount",
     }
 
     def fetch_kline(self, code: str, market: str, period: str, start: str, end: str) -> list[Candle]:
@@ -21,33 +56,52 @@ class AkshareAdapter(DataAdapter):
         if ak_period is None:
             raise ValueError(f"Unsupported period: {period}. Use one of {list(self.PERIOD_MAP.keys())}")
 
-        # akshare expects symbol without market prefix for A-shares
         symbol = code
 
-        try:
-            df = ak.stock_zh_a_hist(
+        def _do_fetch():
+            return ak.stock_zh_a_hist(
                 symbol=symbol,
                 period=ak_period,
                 start_date=start.replace("-", ""),
                 end_date=end.replace("-", ""),
-                adjust="qfq",  # 前复权
+                adjust="qfq",
             )
-        except Exception as e:
-            raise RuntimeError(f"Failed to fetch kline from akshare for {code}: {e}")
+
+        df = _retry(_do_fetch, description=f"fetch_kline({code}, {period})")
 
         if df is None or df.empty:
             return []
 
+        # Rename columns to English (handles API column name changes gracefully)
+        df = df.rename(columns=self.COL_MAP)
+
+        # Fallback: if expected columns still missing, try positional mapping
+        required = {"date", "open", "high", "low", "close", "volume"}
+        if not required.issubset(set(df.columns)):
+            logger.warning(
+                f"Column mismatch! Expected {required}, got {set(df.columns)}. "
+                f"AKShare may have changed its API. Attempting positional fallback."
+            )
+            # AKShare columns are typically: date, code, open, close, high, low, volume, amount, ...
+            if len(df.columns) >= 8:
+                df.columns = ["date", "_code", "open", "close", "high", "low", "volume", "amount"] + \
+                             [f"_extra{i}" for i in range(len(df.columns) - 8)]
+            else:
+                raise RuntimeError(
+                    f"AKShare API column format changed! Got columns: {df.columns.tolist()}. "
+                    f"Please update akshare_adapter.py COL_MAP."
+                )
+
         candles: list[Candle] = []
         for _, row in df.iterrows():
             candles.append(Candle(
-                date=str(row["日期"]),
-                open=float(row["开盘"]),
-                high=float(row["最高"]),
-                low=float(row["最低"]),
-                close=float(row["收盘"]),
-                volume=float(row["成交量"]),
-                amount=float(row.get("成交额", 0)),
+                date=str(row["date"]),
+                open=float(row["open"]),
+                high=float(row["high"]),
+                low=float(row["low"]),
+                close=float(row["close"]),
+                volume=float(row["volume"]),
+                amount=float(row.get("amount", 0)),
             ))
 
         return candles
@@ -58,20 +112,33 @@ class AkshareAdapter(DataAdapter):
         except ImportError:
             raise RuntimeError("akshare is not installed. Run: pip install akshare")
 
-        try:
-            df = ak.stock_zh_a_spot_em()
-        except Exception as e:
-            raise RuntimeError(f"Failed to fetch stock list from akshare: {e}")
+        def _do_fetch():
+            return ak.stock_zh_a_spot_em()
+
+        df = _retry(_do_fetch, description="fetch_stock_list")
 
         if df is None or df.empty:
             return []
 
+        # Rename columns
+        df = df.rename(columns={"代码": "code", "名称": "name"})
+
+        # Fallback if columns missing
+        if "code" not in df.columns or "name" not in df.columns:
+            logger.warning(f"Stock list columns changed: {df.columns.tolist()}")
+            if len(df.columns) >= 2:
+                # First two are usually code and name
+                df = df.rename(columns={df.columns[0]: "code", df.columns[1]: "name"})
+            else:
+                raise RuntimeError(f"AKShare stock list API changed! Columns: {df.columns.tolist()}")
+
         stocks: list[dict] = []
         for _, row in df.iterrows():
+            code_str = str(row["code"])
             stocks.append({
-                "code": str(row["代码"]),
-                "name": str(row["名称"]),
-                "market": "SH" if str(row["代码"]).startswith("6") else "SZ",
+                "code": code_str,
+                "name": str(row["name"]),
+                "market": "SH" if code_str.startswith("6") else "SZ",
             })
 
         return stocks

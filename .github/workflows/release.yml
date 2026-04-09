@@ -1,0 +1,56 @@
+name: Release StockVision
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Install Python deps
+        run: pip install -r python/requirements.txt pyinstaller lark-parser
+
+      - name: Build Python sidecar
+        run: |
+          pyinstaller python/stockvision_backend.spec --distpath src-tauri/binaries/tmp_dist --workpath build/pyinstaller --noconfirm
+          $triple = (rustc -Vv | Select-String 'host:').ToString().Split(' ')[-1]
+          New-Item -ItemType Directory -Force -Path src-tauri/binaries | Out-Null
+          Move-Item "src-tauri/binaries/tmp_dist/python-backend.exe" "src-tauri/binaries/python-backend-$triple.exe"
+          Remove-Item -Recurse -Force src-tauri/binaries/tmp_dist -ErrorAction SilentlyContinue
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'StockVision ${{ github.ref_name }}'
+          releaseBody: |
+            StockVision 更新 ${{ github.ref_name }}
+
+            安装方式：下载 StockVision_x.x.x_x64-setup.exe 双击安装
+            已安装用户：app 内自动提醒更新，点击即可
+          releaseDraft: false
+          prerelease: false

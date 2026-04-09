@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Query, HTTPException, Body
+from api.health_monitor import record_api_error, record_api_success
 
 router = APIRouter(prefix="/api/data", tags=["data"])
 
@@ -26,7 +27,9 @@ def get_kline(
 
     try:
         candles = _adapter.fetch_kline(code, market, period, start, end)
+        record_api_success()
     except Exception as e:
+        record_api_error(f"fetch_kline({code}, {period}): {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
     total = len(candles)
@@ -53,7 +56,9 @@ def get_stocks():
 
     try:
         stocks = _adapter.fetch_stock_list()
+        record_api_success()
     except Exception as e:
+        record_api_error(f"fetch_stock_list: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
     return {"stocks": stocks}

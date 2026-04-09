@@ -3,6 +3,8 @@ import { TopNav } from './TopNav';
 import { StatusBar } from './StatusBar';
 import { ChartContainer } from '@/components/chart/ChartContainer';
 import { InfoPanel } from './InfoPanel';
+import { ApiHealthToast } from '@/components/ui/ApiHealthToast';
+import { UpdateChecker } from '@/components/ui/UpdateChecker';
 
 export function MainLayout() {
   return (
@@ -17,6 +19,8 @@ export function MainLayout() {
         </div>
       </div>
       <StatusBar />
+      <ApiHealthToast />
+      <UpdateChecker />
     </div>
   );
 }

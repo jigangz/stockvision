@@ -55,6 +55,7 @@ export function ChartContainer(): React.ReactElement {
   const [showBacktest, setShowBacktest] = useState(false);
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [formulaOverlay, setFormulaOverlay] = useState<FormulaSeries[]>([]);
+  const [showDrawingToolbar, setShowDrawingToolbar] = useState(false);
   const [drawingChart, setDrawingChart] = useState<IChartApi | null>(null);
   const [drawingSeries, setDrawingSeries] = useState<ISeriesApi<SeriesType> | null>(null);
 
@@ -249,6 +250,10 @@ export function ChartContainer(): React.ReactElement {
     >
       {/* Chart toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: 24, padding: '0 4px', background: 'var(--bg-secondary)', flexShrink: 0 }}>
+        <button
+          style={{ ...toolbarBtnStyle, color: showDrawingToolbar ? '#FFFF00' : 'var(--text-secondary)' }}
+          onClick={() => setShowDrawingToolbar((v) => !v)}
+        >画线</button>
         <button style={toolbarBtnStyle} onClick={() => setShowBacktest(true)}>回测</button>
         <button style={toolbarBtnStyle} onClick={() => setShowDataSource(true)}>数据源</button>
         <button style={toolbarBtnStyle} onClick={() => setShowCapitalFlow(true)}>资金流向</button>
@@ -261,16 +266,16 @@ export function ChartContainer(): React.ReactElement {
       </div>
 
       {/* K-Line area */}
-      <div style={chartAreaStyle('0 0 55%')}>
+      <div style={{ ...chartAreaStyle('0 0 55%'), borderBottom: '2px solid #444' }}>
         <KLineChart ref={klineRef} />
         <DrawingCanvas chart={drawingChart} series={drawingSeries} />
-        <DrawingToolbar />
+        {showDrawingToolbar && <DrawingToolbar />}
         <Crosshair chartArea="kline" />
         <InfoTooltip />
       </div>
 
       {/* Volume area */}
-      <div style={chartAreaStyle('0 0 20%')}>
+      <div style={{ ...chartAreaStyle('0 0 20%'), borderBottom: '2px solid #444' }}>
         <VolumeChart ref={volumeRef} candles={candles} />
         <Crosshair chartArea="volume" />
       </div>

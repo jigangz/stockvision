@@ -283,7 +283,7 @@ while [ $ITERATION -lt $MAX_ITERATIONS ]; do
   echo "Iteration $ITERATION of $MAX_ITERATIONS"
   echo "=============================================="
 
-  # Get next task info (structured) - excludes completed and skipped tasks
+  # Get next batch of tasks (up to 3 in the same phase) - excludes completed and skipped tasks
   NEXT_TASK_JSON=$(jq '
     .features
     | map(select(.passes == false and .skip != true))
@@ -299,6 +299,28 @@ while [ $ITERATION -lt $MAX_ITERATIONS ]; do
   TASK_TITLE=$(echo "$NEXT_TASK_JSON" | jq -r '.title // "unknown"')
   TASK_ISSUE=$(echo "$NEXT_TASK_JSON" | jq -r '.github_issue // "N/A"')
 
+  # Determine phase prefix (e.g. "P2" from "P2-3") for batch grouping
+  TASK_PHASE=$(echo "$TASK_ID" | sed -n 's/^\([A-Z]*[0-9]*\).*/\1/p')
+  # Check if this is a GATE task — gates always run solo
+  IS_GATE=$(echo "$TASK_ID" | grep -i "GATE" > /dev/null 2>&1 && echo "true" || echo "false")
+
+  # Get batch: up to 3 tasks in same phase (never batch GATE tasks)
+  if [ "$IS_GATE" = "false" ] && [ -n "$TASK_PHASE" ]; then
+    BATCH_JSON=$(jq --arg phase "$TASK_PHASE" '
+      .features
+      | map(select(.passes == false and .skip != true and (.id | startswith($phase)) and (.id | test("GATE") | not)))
+      | sort_by(.id)
+      | .[0:3]
+    ' "$PRD_FILE")
+    BATCH_COUNT=$(echo "$BATCH_JSON" | jq 'length')
+    BATCH_IDS=$(echo "$BATCH_JSON" | jq -r '.[].id' | tr '\n' ', ' | sed 's/,$//')
+    BATCH_TITLES=$(echo "$BATCH_JSON" | jq -r '.[].title' | head -3)
+  else
+    BATCH_COUNT=1
+    BATCH_IDS="$TASK_ID"
+    BATCH_TITLES="$TASK_TITLE"
+  fi
+
   if [ "$TASK_ID" = "null" ] || [ "$TASK_ID" = "unknown" ]; then
     echo "All tasks complete!"
     update_status "complete" "" ""
@@ -306,7 +328,11 @@ while [ $ITERATION -lt $MAX_ITERATIONS ]; do
     exit 0
   fi
 
-  echo "Task: $TASK_ID - $TASK_TITLE"
+  if [ "$BATCH_COUNT" -gt 1 ]; then
+    echo "Batch: $BATCH_IDS ($BATCH_COUNT tasks in phase $TASK_PHASE)"
+  else
+    echo "Task: $TASK_ID - $TASK_TITLE"
+  fi
   echo "GitHub: #$TASK_ISSUE"
   echo ""
 
@@ -354,23 +380,26 @@ $GUARDRAILS_CONTENT
 $SCREENSHOT_INSTRUCTIONS
 ## Instructions
 
-You are in a Ralph loop (fresh-context mode). **Each iteration = ONE task.**
+You are in a Ralph loop (fresh-context mode). **Each iteration = up to 3 related tasks in the same phase.**
 
-1. Read $PRD_FILE and find the first task where passes: false
+1. Read $PRD_FILE and find the pending tasks where passes: false
 2. Read $PROGRESS_FILE for context from previous iterations
 3. Read and follow the Guardrails above - they prevent repeated mistakes
-4. Work on **ONE task** until acceptance criteria are met
-5. Run verification: $VERIFY_COMMAND
-6. When the current task is complete:
+4. Work on these tasks for this iteration: **$BATCH_IDS**
+   - Complete each task until its acceptance criteria are met
+   - If there are multiple tasks, do them sequentially (they are in the same phase)
+   - GATE tasks are always done solo — verify ALL criteria thoroughly
+5. Run verification after completing the batch: $VERIFY_COMMAND
+6. For each completed task:
    - Update prd.json: set passes: true and add completed_at
    - Update progress.md with what you learned
-   - **COMMIT your changes** with message: "feat: [task-id] - description\n\nFixes #[github_issue]" (if github_issue is present in the task)
-7. After completing ONE task, check prd.json:
-   - If ALL tasks pass: output <promise>COMPLETE</promise>
-   - If tasks remain: **EXIT immediately** - do NOT continue to other tasks
+   - **COMMIT your changes** with message: "feat: [task-id] - description"
+7. After completing ALL assigned tasks, check prd.json:
+   - If ALL tasks in the entire project pass: output <promise>COMPLETE</promise>
+   - If tasks remain: **EXIT immediately** - do NOT continue to unassigned tasks
 
-**Critical:** This is fresh-context mode. Complete ONE task, commit, then EXIT.
-The bash loop will spawn a fresh session for the next task. Do NOT work on multiple tasks.
+**Critical:** This is fresh-context mode. Complete ONLY the assigned tasks ($BATCH_IDS), commit, then EXIT.
+The bash loop will spawn a fresh session for the next batch. Do NOT work on tasks outside this batch.
 EOF
 
   # Spawn fresh Claude session
@@ -386,12 +415,12 @@ EOF
   # --dangerously-skip-permissions required for non-interactive mode
   claude --print --output-format json --dangerously-skip-permissions \
     "You are in a Ralph loop (fresh-context mode). Read .claude/ralph-state.local.md for instructions, \
-     then read $PRD_FILE to find the next failing task, \
+     then read $PRD_FILE to find the assigned batch of tasks (listed in the state file), \
      and $PROGRESS_FILE for context. Follow all guardrails in the state file. \
-     Complete ONE task only, run '$VERIFY_COMMAND' to verify, commit your changes, \
-     and update prd.json when complete. \
-     CRITICAL: Complete ONE task then EXIT. Do NOT continue to other tasks. \
-     Output <promise>COMPLETE</promise> only when ALL tasks pass." \
+     Complete ONLY the assigned tasks in this batch, run '$VERIFY_COMMAND' to verify, \
+     commit your changes, and update prd.json for each completed task. \
+     CRITICAL: Complete ONLY the assigned batch then EXIT. Do NOT continue to unassigned tasks. \
+     Output <promise>COMPLETE</promise> only when ALL tasks in the entire project pass." \
     > "$JSON_FILE" 2>&1 || true
 
   CLAUDE_END=$(date +%s)

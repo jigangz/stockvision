@@ -14,6 +14,8 @@ struct SidecarChild(Mutex<Option<tauri_plugin_shell::process::CommandChild>>);
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .manage(SidecarChild(Mutex::new(None)))
         .setup(|app| {
             // Spawn the Python backend sidecar on startup.
@@ -44,11 +46,10 @@ pub fn run() {
         .on_window_event(|window, event| {
             // Kill the sidecar when the main window closes.
             if let tauri::WindowEvent::CloseRequested { .. } = event {
-                let state = window.state::<SidecarChild>();
-                if let Ok(mut guard) = state.0.lock() {
-                    if let Some(child) = guard.take() {
-                        let _ = child.kill();
-                    }
+                let state: tauri::State<'_, SidecarChild> = window.state();
+                let mut guard = state.0.lock().unwrap();
+                if let Some(child) = guard.take() {
+                    let _ = child.kill();
                 }
             }
         })

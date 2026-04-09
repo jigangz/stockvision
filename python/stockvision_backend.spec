@@ -8,7 +8,8 @@ from pathlib import Path
 block_cipher = None
 
 # Collect all Python source files from the python/ package
-src = Path("python")
+# Use SPECPATH so it works regardless of CWD
+src = Path(SPECPATH)
 
 a = Analysis(
     [str(src / "main_sidecar.py")],
@@ -52,6 +53,7 @@ a = Analysis(
         "api.capital_flow",
         "api.datasource",
         "api.backtest",
+        "api.health_monitor",
         "data.adapter",
         "data.mock_adapter",
         "data.akshare_adapter",

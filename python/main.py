@@ -22,6 +22,10 @@ from api.datasource import router as datasource_router
 from api.backtest import router as backtest_router
 from data.mock_adapter import MockAdapter
 
+import logging
+
+logger = logging.getLogger("stockvision")
+
 app = FastAPI(title="StockVision API", version="0.1.0")
 
 # CORS — allow Tauri webview and dev server
@@ -33,9 +37,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Default to MockAdapter
-adapter = MockAdapter()
+# --- Adapter init ---
+# STOCKVISION_ADAPTER env var: "mock" forces MockAdapter, "akshare" (default) tries AKShare.
+import os
+_adapter_env = os.environ.get("STOCKVISION_ADAPTER", "akshare").lower()
+
+_adapter_name = "MockAdapter"
+if _adapter_env == "mock":
+    adapter = MockAdapter()
+    logger.info("Using MockAdapter (forced via STOCKVISION_ADAPTER=mock)")
+else:
+    try:
+        from data.akshare_adapter import AkshareAdapter
+        adapter = AkshareAdapter()
+        import akshare  # noqa: F401
+        _adapter_name = "AkshareAdapter"
+        logger.info("Using AkshareAdapter (real market data)")
+    except Exception as e:
+        logger.warning(f"AKShare unavailable ({e}), falling back to MockAdapter")
+        adapter = MockAdapter()
+
 set_adapter(adapter)
+
+# --- API health monitor state ---
+from api.health_monitor import router as health_monitor_router, record_api_error, record_api_success  # noqa: E402
 
 app.include_router(data_router)
 app.include_router(config_router)
@@ -48,11 +73,12 @@ app.include_router(heatmap_router)
 app.include_router(capital_flow_router)
 app.include_router(datasource_router)
 app.include_router(backtest_router)
+app.include_router(health_monitor_router)
 
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "adapter": type(adapter).__name__}
+    return {"status": "ok", "adapter": _adapter_name}
 
 
 if __name__ == "__main__":

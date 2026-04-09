@@ -7,6 +7,8 @@ import styles from './InfoTooltip.module.css';
 
 export const InfoTooltip: React.FC = () => {
   const activeBarIndex = useCrosshairStore((s) => s.activeBarIndex);
+  const snapX = useCrosshairStore((s) => s.snapX);
+  const mouseY = useCrosshairStore((s) => s.mouseY);
   const currentCode = useChartStore((s) => s.currentCode);
   const candles = useDataStore((s) => s.candles);
 
@@ -42,8 +44,14 @@ export const InfoTooltip: React.FC = () => {
   const colorClass =
     data.change > 0 ? styles.up : data.change < 0 ? styles.down : styles.flat;
 
+  // Position tooltip near crosshair: to the right if space, else to the left
+  const tooltipStyle: React.CSSProperties = {
+    left: snapX !== null ? snapX + 20 : 8,
+    top: mouseY !== null ? Math.max(8, mouseY - 60) : 8,
+  };
+
   return (
-    <div className={styles.tooltip}>
+    <div className={styles.tooltip} style={tooltipStyle}>
       <div className={styles.header}>
         <span className={styles.symbol}>{data.symbol}</span>
         <span className={styles.time}>{data.time}</span>

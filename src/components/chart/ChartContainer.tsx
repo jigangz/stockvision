@@ -221,6 +221,8 @@ export function ChartContainer(): React.ReactElement {
   // Keyboard shortcuts (F5/F10/arrows/PageUp/PageDown/Home/End/Enter/Esc/Ctrl+Z/Delete)
   useKeyboardShortcuts({
     klineRef,
+    volumeRef,
+    indicatorRef,
     charts: zoomCharts,
     onRefresh: handleRefresh,
     onStockInfo: () => setShowIntervalStats(true),

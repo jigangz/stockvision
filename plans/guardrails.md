@@ -118,6 +118,12 @@ Add signs below as you encounter project-specific failure patterns:
 **Reason:** Keyboard wizard should not trigger while user is typing in a text field or dialog.
 **Added after:** v0.3 planning, 2026-04-08
 
+### SIGN-034: Don't Mix Ralph Bash + Agent Tool Dispatch
+**Trigger:** Starting execution phase of big-project-workflow
+**Instruction:** Choose ONE execution method and stick with it: either ralph.sh bash loop OR Agent tool dispatch. Never run both simultaneously — they will conflict on prd.json and code files. If ralph stops mid-run, check `git log` for its commits before manually continuing.
+**Reason:** StockVision v0.3: ralph.sh worked fine on Windows (3 iterations completed), but conflicted with concurrent Agent tool dispatch causing git/file conflicts.
+**Added after:** v0.3 Phase 7-10 execution, 2026-04-09
+
 ### SIGN-033: Flex Layout — Account for Fixed Elements
 **Trigger:** Adding sidebar or panels to existing flex layout
 **Instruction:** When adding fixed-width sidebars (watchlist 160px, info panel 200px), the chart area must use flex:1 to fill remaining space. Don't use percentage widths that don't account for sidebars.

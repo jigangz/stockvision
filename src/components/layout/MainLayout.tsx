@@ -15,6 +15,7 @@ const MarketTable = lazy(() => import('@/components/market/MarketTable'));
 
 export function MainLayout() {
   const activeView = useChartStore((s) => s.activeView);
+  const zoomLevel = useChartStore((s) => s.zoomLevel);
 
   return (
     <div className={styles.container}>
@@ -23,13 +24,15 @@ export function MainLayout() {
         {activeView === 'chart' ? (
           <>
             <WatchlistSidebar />
-            <div className={styles.chartArea}>
+            <div className={styles.chartArea} style={zoomLevel >= 1 ? { borderRight: 'none' } : undefined}>
               <ChartContainer />
             </div>
-            <div className={styles.infoPanel}>
-              <StockInfoPanel />
-              <InfoPanel />
-            </div>
+            {zoomLevel < 1 && (
+              <div className={styles.infoPanel}>
+                <StockInfoPanel />
+                <InfoPanel />
+              </div>
+            )}
           </>
         ) : (
           <div className={styles.marketArea}>

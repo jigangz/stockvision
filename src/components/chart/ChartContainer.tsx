@@ -9,6 +9,7 @@ import { InfoTooltip } from '@/components/chart/InfoTooltip';
 import { ChartSettingsDialog } from '@/components/chart/ChartSettingsDialog';
 import { PriceScaleDialog } from '@/components/chart/PriceScaleDialog';
 import { DrawingCanvas } from '@/components/chart/DrawingCanvas';
+import { DrawingContextMenu } from '@/components/chart/DrawingContextMenu';
 import { DrawingToolbar } from '@/components/chart/DrawingToolbar';
 import { IndicatorTabBar } from '@/components/chart/IndicatorTabBar';
 import { IntervalStatsDialog } from '@/components/chart/IntervalStatsDialog';
@@ -22,6 +23,7 @@ import { StockCodeInput } from '@/components/chart/StockCodeInput';
 import type { FormulaSeries } from '@/components/chart/IndicatorChart';
 import { useDataStore } from '@/stores/dataStore';
 import { useChartStore } from '@/stores/chartStore';
+import { useIndicatorStore } from '@/stores/indicatorStore';
 import { useChartSettingsStore, getDefaultRightOffset } from '@/stores/chartSettingsStore';
 import { useDrawingStore } from '@/stores/drawingStore';
 import { useWatchlistStore } from '@/stores/watchlistStore';
@@ -39,6 +41,7 @@ export function ChartContainer(): React.ReactElement {
   const currentCode = useChartStore((s) => s.currentCode);
   const currentMarket = useChartStore((s) => s.currentMarket);
   const currentPeriod = useChartStore((s) => s.currentPeriod);
+  const zoomLevel = useChartStore((s) => s.zoomLevel);
   const displayDays = useChartSettingsStore((s) => s.displayDays);
   const setRightOffset = useChartSettingsStore((s) => s.setRightOffset);
   const saveSettings = useChartSettingsStore((s) => s.saveSettings);
@@ -61,10 +64,17 @@ export function ChartContainer(): React.ReactElement {
   const [showDrawingToolbar, setShowDrawingToolbar] = useState(false);
   const [drawingChart, setDrawingChart] = useState<IChartApi | null>(null);
   const [drawingSeries, setDrawingSeries] = useState<ISeriesApi<SeriesType> | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
 
   const klineRef = useRef<KLineChartHandle>(null);
   const volumeRef = useRef<VolumeChartHandle>(null);
-  const indicatorRef = useRef<IndicatorChartHandle>(null);
+  const indicatorUpperRef = useRef<IndicatorChartHandle>(null);
+  const indicatorLowerRef = useRef<IndicatorChartHandle>(null);
+  // Backward-compat ref: points to the lower section for keyboard shortcuts
+  const indicatorRef = indicatorLowerRef;
+
+  const activeSection = useIndicatorStore((s) => s.activeSection);
+  const setActiveSection = useIndicatorStore((s) => s.setActiveSection);
 
   // Load persisted settings on mount
   useEffect(() => {
@@ -168,8 +178,13 @@ export function ChartContainer(): React.ReactElement {
       },
       {
         key: 'indicator' as const,
-        chart: indicatorRef.current?.chart ?? null,
-        series: (indicatorRef.current?.histSeries ?? null) as ISeriesApi<SeriesType> | null,
+        chart: indicatorUpperRef.current?.chart ?? null,
+        series: (indicatorUpperRef.current?.histSeries ?? null) as ISeriesApi<SeriesType> | null,
+      },
+      {
+        key: 'indicator2' as const,
+        chart: indicatorLowerRef.current?.chart ?? null,
+        series: (indicatorLowerRef.current?.histSeries ?? null) as ISeriesApi<SeriesType> | null,
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -184,7 +199,8 @@ export function ChartContainer(): React.ReactElement {
     return [
       klineRef.current?.chart ?? null,
       volumeRef.current?.chart ?? null,
-      indicatorRef.current?.chart ?? null,
+      indicatorUpperRef.current?.chart ?? null,
+      indicatorLowerRef.current?.chart ?? null,
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [candles]);
@@ -283,29 +299,72 @@ export function ChartContainer(): React.ReactElement {
         <button style={toolbarBtnStyle} onClick={() => setShowSettings(true)}>设置</button>
       </div>
 
-      {/* K-Line area — flex-grow proportional (55:20:25) */}
-      <div style={{ ...chartAreaStyle('55 1 0'), borderBottom: '2px solid #444' }}>
+      {/* K-Line area — flex 50, expands to fill when indicators hidden */}
+      <div
+        style={{ ...chartAreaStyle(zoomLevel >= 2 ? '1 1 0' : '50 1 0'), borderBottom: zoomLevel >= 2 ? 'none' : '2px solid #444' }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          setCtxMenu({ x: e.clientX, y: e.clientY });
+        }}
+      >
         <KLineChart ref={klineRef} />
         <DrawingCanvas chart={drawingChart} series={drawingSeries} />
         {showDrawingToolbar && <DrawingToolbar />}
         <Crosshair chartArea="kline" />
         <InfoTooltip />
+        {ctxMenu && (
+          <DrawingContextMenu
+            x={ctxMenu.x}
+            y={ctxMenu.y}
+            onClose={() => setCtxMenu(null)}
+          />
+        )}
       </div>
 
-      {/* Volume area */}
-      <div style={{ ...chartAreaStyle('20 1 0'), borderBottom: '2px solid #444' }}>
-        <VolumeChart ref={volumeRef} candles={candles} />
-        <Crosshair chartArea="volume" />
-      </div>
-
-      {/* Indicator area with tab bar */}
-      <div style={{ flex: '25 1 0', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-        <IndicatorTabBar />
-        <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-          <IndicatorChart ref={indicatorRef} candles={candles} formulaOverlay={formulaOverlay} />
-          <Crosshair chartArea="indicator" />
+      {/* Upper Indicator section — flex 25 */}
+      {zoomLevel < 2 && (
+        <div
+          style={{
+            ...chartAreaStyle('25 1 0'),
+            borderBottom: '2px solid #444',
+            borderLeft: activeSection === 'upper' ? '2px solid var(--color-up)' : '2px solid transparent',
+          }}
+        >
+          <IndicatorChart
+            ref={indicatorUpperRef}
+            candles={candles}
+            section="upper"
+            focused={activeSection === 'upper'}
+            onFocus={() => setActiveSection('upper')}
+          />
+          <Crosshair chartArea="volume" />
         </div>
-      </div>
+      )}
+
+      {/* Lower Indicator section + shared TabBar — flex 25 */}
+      {zoomLevel < 2 && (
+        <div style={{ flex: '25 1 0', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <div
+            style={{
+              flex: 1,
+              minHeight: 0,
+              position: 'relative',
+              borderLeft: activeSection === 'lower' ? '2px solid var(--color-up)' : '2px solid transparent',
+            }}
+          >
+            <IndicatorChart
+              ref={indicatorLowerRef}
+              candles={candles}
+              section="lower"
+              focused={activeSection === 'lower'}
+              onFocus={() => setActiveSection('lower')}
+              formulaOverlay={formulaOverlay}
+            />
+            <Crosshair chartArea="indicator" />
+          </div>
+          <IndicatorTabBar />
+        </div>
+      )}
 
       {showBacktest && <BacktestResult onClose={() => setShowBacktest(false)} />}
       {showDataSource && <DataSourceSettings onClose={() => setShowDataSource(false)} />}

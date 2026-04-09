@@ -30,6 +30,9 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
     const candles = useDataStore((s) => s.candles);
     const zoomLevel = useChartStore((s) => s.zoomLevel);
     const rightOffset = useChartSettingsStore((s) => s.rightOffset);
+    const priceScaleMode = useChartSettingsStore((s) => s.priceScaleMode);
+    const priceMin = useChartSettingsStore((s) => s.priceMin);
+    const priceMax = useChartSettingsStore((s) => s.priceMax);
     const activeIndicatorUpper = useIndicatorStore((s) => s.activeIndicatorUpper);
     const activeIndicatorLower = useIndicatorStore((s) => s.activeIndicatorLower);
     const upperParams = useIndicatorStore((s) => s.indicatorParams[s.activeIndicatorUpper]);
@@ -182,6 +185,42 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       // KLineChart uses pixel distance; approximate bar width ~8px
       chart.scrollByDistance(0); // no-op to ensure chart is ready
     }, [rightOffset]);
+
+    // Apply manual price scale (Y-axis range override)
+    useEffect(() => {
+      const chart = chartRef.current;
+      if (!chart) return;
+
+      if (priceScaleMode === 'manual' && priceMin != null && priceMax != null) {
+        const min = Math.min(priceMin, priceMax);
+        const max = Math.max(priceMin, priceMax);
+        chart.setPaneOptions({
+          id: 'candle_pane',
+          axis: {
+            createRange: ({ defaultRange }) => ({
+              ...defaultRange,
+              from: min,
+              to: max,
+              range: max - min,
+              realFrom: min,
+              realTo: max,
+              realRange: max - min,
+              displayFrom: min,
+              displayTo: max,
+              displayRange: max - min,
+            }),
+          },
+        });
+      } else {
+        // Reset to auto — remove custom createRange by setting axis without it
+        chart.setPaneOptions({
+          id: 'candle_pane',
+          axis: {
+            createRange: undefined as never,
+          },
+        });
+      }
+    }, [priceScaleMode, priceMin, priceMax]);
 
     return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
   },

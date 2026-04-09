@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import * as d3 from 'd3';
+import { init as initKChart, dispose as disposeKChart } from 'klinecharts';
+import { darkStyles } from '@/theme/klineTheme';
 import { useDataStore } from '@/stores/dataStore';
 import { useChartStore } from '@/stores/chartStore';
 
@@ -116,108 +118,53 @@ function StatCard({ label, value, color }: { label: string; value: string; color
 }
 
 function EquityCurveChart({ equityCurve, initialCapital }: { equityCurve: EquityPoint[]; initialCapital: number }) {
-  const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!svgRef.current || equityCurve.length < 2) return;
-    const svg = d3.select(svgRef.current);
-    svg.selectAll('*').remove();
+    const el = containerRef.current;
+    if (!el || equityCurve.length < 2) return;
 
-    const W = svgRef.current.clientWidth || 780;
-    const H = 160;
-    const margin = { top: 10, right: 20, bottom: 30, left: 60 };
-    const w = W - margin.left - margin.right;
-    const h = H - margin.top - margin.bottom;
+    const chart = initKChart(el, {
+      styles: darkStyles as never,
+    });
+    if (!chart) return;
 
-    const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+    // Convert equity curve to KLineData format (line chart using close only)
+    const klineData = equityCurve.map((ep) => ({
+      timestamp: new Date(ep.date).getTime(),
+      open: ep.equity,
+      high: ep.equity,
+      low: ep.equity,
+      close: ep.equity,
+      volume: 0,
+    }));
 
-    const equities = equityCurve.map((d) => d.equity);
-    const benchmarks = equityCurve.map((_, i) =>
-      initialCapital * (1 + (i / (equityCurve.length - 1)) * 0),
-    ).map(() => initialCapital); // flat benchmark
+    // Feed data via DataLoader
+    chart.setSymbol({ ticker: 'equity', pricePrecision: 2, volumePrecision: 0 });
+    chart.setPeriod({ type: 'day', span: 1 });
+    chart.setDataLoader({
+      getBars: ({ callback }) => {
+        callback(klineData, false);
+      },
+    });
 
-    const allValues = [...equities, ...benchmarks];
-    const minVal = Math.min(...allValues) * 0.995;
-    const maxVal = Math.max(...allValues) * 1.005;
+    // Add benchmark horizontal line overlay at initialCapital
+    const firstTs = new Date(equityCurve[0].date).getTime();
+    chart.createOverlay({
+      name: 'horizontalStraightLine',
+      points: [{ timestamp: firstTs, value: initialCapital }],
+      styles: {
+        line: { color: '#FFFFFF', size: 1, style: 'dashed' },
+      },
+    });
 
-    const xScale = d3.scaleLinear().domain([0, equityCurve.length - 1]).range([0, w]);
-    const yScale = d3.scaleLinear().domain([minVal, maxVal]).range([h, 0]);
-
-    // Grid lines
-    g.append('g')
-      .selectAll('line')
-      .data(yScale.ticks(4))
-      .enter()
-      .append('line')
-      .attr('x1', 0).attr('x2', w)
-      .attr('y1', (d) => yScale(d)).attr('y2', (d) => yScale(d))
-      .attr('stroke', 'var(--grid-line)').attr('stroke-width', 0.5);
-
-    // Benchmark line (white dashed)
-    const benchLine = d3.line<EquityPoint>()
-      .x((_, i) => xScale(i))
-      .y(() => yScale(initialCapital));
-    g.append('path')
-      .datum(equityCurve)
-      .attr('d', benchLine)
-      .attr('fill', 'none')
-      .attr('stroke', 'var(--ma60)')
-      .attr('stroke-width', 1)
-      .attr('stroke-dasharray', '4,3')
-      .attr('opacity', 0.5);
-
-    // Equity curve
-    const isUp = equityCurve[equityCurve.length - 1].equity >= initialCapital;
-    const equityLine = d3.line<EquityPoint>()
-      .x((_, i) => xScale(i))
-      .y((d) => yScale(d.equity));
-    g.append('path')
-      .datum(equityCurve)
-      .attr('d', equityLine)
-      .attr('fill', 'none')
-      .attr('stroke', isUp ? 'var(--color-up)' : 'var(--color-down)')
-      .attr('stroke-width', 1.5);
-
-    // Y axis
-    g.append('g')
-      .call(
-        d3.axisLeft(yScale)
-          .ticks(4)
-          .tickFormat((v) => {
-            const n = Number(v);
-            return n >= 10000 ? `${(n / 10000).toFixed(1)}万` : String(Math.round(n));
-          }),
-      )
-      .selectAll('text')
-      .attr('fill', 'var(--text-muted)')
-      .attr('font-size', '10');
-
-    // X axis (show ~5 labels)
-    const step = Math.max(1, Math.floor(equityCurve.length / 5));
-    const xTicks = equityCurve
-      .map((d, i) => ({ idx: i, date: d.date }))
-      .filter((_, i) => i % step === 0 || i === equityCurve.length - 1);
-
-    g.append('g')
-      .attr('transform', `translate(0,${h})`)
-      .selectAll('text')
-      .data(xTicks)
-      .enter()
-      .append('text')
-      .attr('x', (d) => xScale(d.idx))
-      .attr('y', 14)
-      .attr('text-anchor', 'middle')
-      .attr('fill', 'var(--text-muted)')
-      .attr('font-size', '10')
-      .text((d) => d.date.slice(0, 10));
+    return () => disposeKChart(el);
   }, [equityCurve, initialCapital]);
 
   return (
-    <svg
-      ref={svgRef}
-      width="100%"
-      height={160}
-      style={{ display: 'block', background: 'var(--bg-panel)', borderRadius: 3 }}
+    <div
+      ref={containerRef}
+      style={{ width: '100%', height: 200, background: 'var(--bg-panel)', borderRadius: 3 }}
     />
   );
 }

@@ -118,37 +118,13 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
     // Update candles ref and reload chart when candles change (new stock selected)
     useEffect(() => {
       candlesRef.current = candles;
-      // Skip reload if lazy loading is in progress (fetchMoreBars triggered this update).
-      // Resetting DataLoader mid-lazy-load would reset the scroll position.
       if (isLazyLoadingRef.current) return;
       const chart = chartRef.current;
       if (!chart || !candles.length) return;
 
-      // Re-set DataLoader to trigger chart reload with new stock data
-      chart.setDataLoader({
-        getBars: async ({ type, callback }) => {
-          const store = useDataStore.getState();
-          if (type === 'backward') {
-            if (store.allLoaded || store.loadingMore) {
-              callback([], false);
-              return;
-            }
-            isLazyLoadingRef.current = true;
-            try {
-              const prevCount = store.candles.length;
-              await store.fetchMoreBars();
-              const next = useDataStore.getState();
-              const addedCount = next.candles.length - prevCount;
-              const olderBars = addedCount > 0 ? toKLineData(next.candles.slice(0, addedCount)) : [];
-              callback(olderBars, { backward: !next.allLoaded });
-            } finally {
-              isLazyLoadingRef.current = false;
-            }
-          } else {
-            callback(toKLineData(candlesRef.current), { backward: !store.allLoaded });
-          }
-        },
-      });
+      // Re-trigger DataLoader by resetting the symbol — this causes getBars to be
+      // called again with type='init', which will read the latest candlesRef.current
+      chart.setSymbol({ ticker: 'stock', pricePrecision: 2, volumePrecision: 0 });
     }, [candles]);
 
     // Update upper indicator when selection changes
@@ -157,11 +133,13 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       const paneId = upperPaneIdRef.current;
       if (!chart || !paneId) return;
 
+      // Remove all indicators from this pane, then add the new one into the SAME pane
       chart.removeIndicator({ paneId });
       const calcParams = upperParams ? Object.values(upperParams) : undefined;
+      // Use isStack=false with existing paneId to reuse the pane (not create a new one)
       chart.createIndicator(
         { name: activeIndicatorUpper, ...(calcParams ? { calcParams } : {}) },
-        true,
+        false,
         { id: paneId },
       );
     }, [activeIndicatorUpper, upperParams]);
@@ -176,7 +154,7 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       const calcParams = lowerParams ? Object.values(lowerParams) : undefined;
       chart.createIndicator(
         { name: activeIndicatorLower, ...(calcParams ? { calcParams } : {}) },
-        true,
+        false,
         { id: paneId },
       );
     }, [activeIndicatorLower, lowerParams]);

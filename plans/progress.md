@@ -512,3 +512,37 @@ created: 2026-04-07
 - View switching between chart and market works (F6, 行情 button, Esc, double-click) ✓
 - Virtual scroll handles 5000+ rows smoothly (manual ROW_HEIGHT=26, OVERSCAN=8) ✓
 - TypeScript 0 errors ✓
+
+## 2026-04-08 — P10-1: KeyboardWizard 键盘精灵
+
+### What was built
+- **`src/components/chart/KeyboardWizard.tsx`**: Full keyboard wizard component
+  - Module-level `stockCache` + `fetchPromise` — fetches `/api/data/stocks` exactly once per session
+  - Global `keydown` listener: digit key (0-9) opens popup, ignores input/textarea/contentEditable focus
+  - Popup positioned `fixed` bottom-right (bottom: 40px, right: 20px), zIndex 2001
+  - Filter: `code.startsWith(query) || name.toLowerCase().includes(q)`, max 20 results
+  - Market label: SH→上海A股, SZ 300*/301*→创业板, 002*/003*→中小板, else→深圳A股
+  - Arrow up/down navigates list; Enter confirms; Esc closes; click outside closes
+  - On confirm: calls `setCode`, `setMarket`, `setActiveView('chart')`
+- **`src/components/layout/MainLayout.tsx`**: Added `<KeyboardWizard anyDialogOpen={false} />`
+
+### Key patterns learned
+- Module-level promise deduplication: `fetchPromise` prevents duplicate in-flight requests
+- Fixed bottom-right positioning works in both chart and market views (MainLayout renders wizard globally)
+- `requestAnimationFrame` needed to focus input after React render triggered by state change
+
+## 2026-04-08 — P10-2: K-line keyboard navigation
+
+### What was built
+- **`src/hooks/useKeyboardShortcuts.ts`**: Enhanced arrow key handling
+  - Added `keyboardNavRef = useRef(false)` to track keyboard navigation mode
+  - Arrow left/right: sets `keyboardNavRef.current = true`, initializes to last bar if no active bar
+  - **Auto-scroll**: after computing `nextIndex`, checks `getVisibleLogicalRange()`. If `nextIndex < range.from + 5`, shifts all charts left. If `nextIndex > range.to - 5`, shifts all charts right.
+  - **Mouse exit**: separate `useEffect` adds `mousemove` + `click` listeners. On trigger: `keyboardNavRef.current = false`, clears crosshairStore, calls `clearCrosshairPosition()`.
+  - `setCrosshairPosition(bar.close, bar.time, kSeries)` drives LW Charts time-axis highlight and InfoTooltip via crosshairStore `activeBarIndex`.
+
+### Key patterns learned
+- `keyboardNavRef` shared between two `useEffect` closures via stable ref object identity
+- Auto-scroll margin = 5 bars: `nextIndex < range.from + margin` → scroll left; `nextIndex > range.to - margin` → scroll right
+- LW Charts `setCrosshairPosition` automatically highlights the time axis date and triggers crosshair sync hook
+- `clearCrosshairPosition()` is the LW Charts API to programmatically remove crosshair

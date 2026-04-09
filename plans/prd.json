@@ -1,798 +1,144 @@
 {
   "repo": "jigangz/stockvision",
   "branchName": "main",
-  "verifyCommand": "npm run typecheck && cd python && pytest ../tests/python/ -v && cd ..",
-  "acceptanceCriteria": [
-    "All phase gate tests pass",
-    "No TypeScript errors",
-    "Python tests pass",
-    "UI matches 通达信 reference screenshots"
-  ],
+  "version": "0.4.0",
+  "verifyCommand": "npm run typecheck",
+  "planFile": "docs/superpowers/plans/2026-04-09-klinechart-migration.md",
   "features": [
     {
-      "id": "P1-1",
-      "title": "Phase 1.1: Tauri + React 项目初始化",
-      "acceptanceCriteria": [
-        "npm create tauri-app with react-ts template",
-        "lightweight-charts, zustand, d3 installed",
-        "Vite alias @ -> src/ configured",
-        "tauri.conf.json: title 'StockVision', default 1920x1080",
-        "App builds and opens empty window"
-      ],
+      "id": "MIG-1",
+      "title": "Data adapter (toKLineData) + KLineChart dark theme (klineTheme.ts)",
       "priority": "high",
-      "passes": true,
-      "notes": "Foundation task — everything depends on this"
+      "passes": false,
+      "plan_task": 1,
+      "description": "Create src/chart/dataAdapter.ts and src/theme/klineTheme.ts per plan Task 1"
     },
     {
-      "id": "P1-2",
-      "title": "Phase 1.2: 黑底主题系统",
-      "acceptanceCriteria": [
-        "CSS variables defined per CLAUDE.md spec (--bg-primary, --color-up, --color-down, etc.)",
-        "darkTheme.ts + global.css created",
-        "Body background #000000, default text white",
-        "No hardcoded colors in components"
-      ],
+      "id": "MIG-2",
+      "title": "KLineChartWrapper core component with multi-pane layout",
       "priority": "high",
-      "passes": true,
-      "notes": ""
+      "passes": false,
+      "plan_task": 2,
+      "description": "Create src/components/chart/KLineChartWrapper.tsx per plan Task 2. Single init() with MA, VOL, MACD panes."
     },
     {
-      "id": "P1-3",
-      "title": "Phase 1.3: 主布局 MainLayout.tsx",
-      "acceptanceCriteria": [
-        "TopNav 60px, K线区 55%, 成交量 20%, 指标 25%, InfoPanel 25% width, StatusBar 28px",
-        "Layout matches 通达信 reference proportions",
-        "Splitter between chart areas is draggable",
-        "InfoPanel is collapsible"
-      ],
+      "id": "MIG-3",
+      "title": "Overlay mapping + custom overlay registrations (20 overlays)",
       "priority": "high",
-      "passes": true,
-      "notes": ""
+      "passes": false,
+      "plan_task": 3,
+      "description": "Create src/chart/overlayMapping.ts and src/chart/customOverlays.ts per plan Task 3"
     },
     {
-      "id": "P1-4",
-      "title": "Phase 1.4: K线主图 KLineChart.tsx",
-      "acceptanceCriteria": [
-        "Lightweight Charts 4.x rendering candlesticks",
-        "Red up (#FF4444), green down (#00CC66)",
-        "MA5 yellow, MA10 purple, MA20 green, MA60 white",
-        "rightOffset 30 bars default",
-        "Chart renders with mock data"
-      ],
+      "id": "MIG-4",
+      "title": "Custom indicators (FSL, MOST, ASI, BRAR) registration",
       "priority": "high",
-      "passes": true,
-      "notes": ""
+      "passes": false,
+      "plan_task": 4,
+      "description": "Create src/chart/customIndicators.ts per plan Task 4"
     },
     {
-      "id": "P1-5",
-      "title": "Phase 1.5: 周期切换器 PeriodSelector.tsx",
-      "acceptanceCriteria": [
-        "All periods available: min1/5/15/30/60, daily/weekly/monthly, quarterly/yearly",
-        "Custom period dialog works (N + unit)",
-        "Period switching triggers data reload"
-      ],
+      "id": "MIG-5",
+      "title": "Rewrite ChartContainer for KLineChartWrapper integration",
       "priority": "high",
-      "passes": true,
-      "notes": ""
+      "passes": false,
+      "plan_task": 5,
+      "description": "Rewrite src/components/chart/ChartContainer.tsx per plan Task 5. Remove LW Charts refs, use single KLineChartWrapper."
     },
     {
-      "id": "P1-6",
-      "title": "Phase 1.6: 成交量 + MACD",
-      "acceptanceCriteria": [
-        "Volume HistogramSeries with red/green coloring",
-        "Volume MA5 (yellow) + MA10 (purple)",
-        "MACD(12,26,9): DIF white, DEA yellow, MACD histogram red/green",
-        "Three charts share timeScale, sync on scroll/zoom"
-      ],
+      "id": "MIG-6",
+      "title": "Adapt useKeyboardShortcuts for KLineChart API",
       "priority": "high",
-      "passes": true,
-      "notes": ""
+      "passes": false,
+      "plan_task": 6,
+      "description": "Rewrite src/hooks/useKeyboardShortcuts.ts per plan Task 6. Use scrollToDataIndex, zoomAtCoordinate, executeAction."
     },
     {
-      "id": "P1-7",
-      "title": "Phase 1.7: 数据层 + Data Adapter",
-      "acceptanceCriteria": [
-        "DataAdapter interface defined (fetchKline, fetchStockList, sync)",
-        "MockAdapter generates random OHLCV data",
-        "AKShareAdapter skeleton with real API call",
-        "TdxFileAdapter reads .day binary files",
-        "FastAPI backend runs on localhost:8899",
-        "GET /api/data/kline returns mock data",
-        "GET /api/data/stocks returns stock list"
-      ],
+      "id": "MIG-7",
+      "title": "Register custom code at app entry (main.tsx)",
       "priority": "high",
-      "passes": true,
-      "notes": "Data adapter 抽象层 — dev 用 mock, prod 切 AKShare/Tushare/通达信"
+      "passes": false,
+      "plan_task": 7,
+      "description": "Add registerCustomIndicators() and registerCustomOverlays() to src/main.tsx per plan Task 7"
     },
     {
-      "id": "P1-GATE",
-      "title": "Phase 1 Gate: E2E 验收测试",
-      "acceptanceCriteria": [
-        "App launches showing real/mock K-line chart",
-        "MA lines display correctly",
-        "Volume chart syncs with K-line",
-        "MACD indicator displays below",
-        "Period switching works",
-        "All TypeScript compiles without errors",
-        "Python backend starts and responds to API calls",
-        "All unit tests pass"
-      ],
+      "id": "MIG-8",
+      "title": "Simplify crosshairStore for native KLineChart crosshair",
+      "priority": "medium",
+      "passes": false,
+      "plan_task": 8,
+      "description": "Rewrite src/stores/crosshairStore.ts per plan Task 8. Keep only activeBarIndex + isKeyboardNavMode."
+    },
+    {
+      "id": "MIG-9",
+      "title": "Delete old LW Charts files (9 files) + fix imports",
       "priority": "high",
-      "passes": true,
-      "notes": "PHASE GATE: 必须全部通过才能进入 Phase 2"
+      "passes": false,
+      "plan_task": 9,
+      "description": "Delete KLineChart.tsx, VolumeChart.tsx, Crosshair.tsx, InfoTooltip.tsx, useCrosshairSync.ts, useWheelZoom.ts, useChartSync.ts, darkTheme.ts, indicator.worker.ts. Fix remaining imports."
     },
     {
-      "id": "P2-1",
-      "title": "Phase 2.1: 十字光标 + 信息浮窗",
-      "acceptanceCriteria": [
-        "Crosshair snaps to nearest K-line center",
-        "Arrow keys move one bar at a time",
-        "Vertical line spans all 3 chart areas",
-        "Horizontal line stays within current area",
-        "Y-axis price label (red bg) at crosshair",
-        "X-axis time label at crosshair",
-        "Info tooltip shows: symbol, time, OHLC, change%, volume, amount, turnover, amplitude",
-        "Red bg for tooltip, red/green coloring for values"
-      ],
+      "id": "MIG-10",
+      "title": "DrawingCanvas -> DrawingBridge (overlay sync bridge)",
+      "priority": "high",
+      "passes": false,
+      "plan_task": 10,
+      "description": "Create DrawingBridge.tsx to sync drawingStore with KLineChart overlays. Delete DrawingCanvas.tsx (1315 lines)."
+    },
+    {
+      "id": "MIG-11",
+      "title": "BacktestResult equity curve migration to KLineChart",
       "priority": "medium",
-      "passes": true,
-      "notes": "Completed in session: crosshair + tooltip + wheel zoom"
+      "passes": false,
+      "plan_task": 11,
+      "description": "Replace D3 equity curve in BacktestResult.tsx with KLineChart instance per plan Task 11"
     },
     {
-      "id": "P2-2",
-      "title": "Phase 2.2: 鼠标滚轮缩放",
-      "acceptanceCriteria": [
-        "Scroll up = zoom in (fewer bars, more detail), centered on cursor",
-        "Scroll down = zoom out (more bars)",
-        "All 3 chart areas sync zoom on X-axis",
-        "150ms ease-out animation"
-      ],
+      "id": "MIG-12",
+      "title": "Delete IndicatorChart.tsx + move FormulaSeries type",
       "priority": "medium",
-      "passes": true,
-      "notes": "Completed in session: crosshair + tooltip + wheel zoom"
+      "passes": false,
+      "plan_task": 12,
+      "description": "Move FormulaSeries to src/types/chart.ts, delete IndicatorChart.tsx, wire IndicatorParamsDialog to KLineChart"
     },
     {
-      "id": "P2-3",
-      "title": "Phase 2.3: 右侧空白 + 上方空白",
-      "acceptanceCriteria": [
-        "rightOffset adjustable via settings dialog (default 30)",
-        "Display days setting dialog (default 280)",
-        "rightOffset draggable at timeScale edge",
-        "Price scale manual range setting (坐标设置 dialog)",
-        "Settings persist to SQLite config table"
-      ],
+      "id": "MIG-13",
+      "title": "Update DrawingContextMenu for KLineChart overlay API",
       "priority": "medium",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "ChartSettingsDialog + PriceScaleDialog; chartSettingsStore; config API with SQLite; rightOffset tracked from timeScale drag"
+      "passes": false,
+      "plan_task": 13,
+      "description": "Wire lock/unlock to chart.overrideOverlay() per plan Task 13"
     },
     {
-      "id": "P2-4",
-      "title": "Phase 2.4: 右侧信息面板 InfoPanel",
-      "acceptanceCriteria": [
-        "MarketSummary: latest price, open, prev close, change%, volume, turnover",
-        "TickList: time|price|volume scrolling list with red/green",
-        "Sector quick links section",
-        "Panel collapse/expand works"
-      ],
-      "priority": "medium",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "InfoPanel.tsx: MarketSummary from last candle, TickList from recent 30 bars (newest first), 12 sector quick links, collapse/expand toggle button"
+      "id": "MIG-14",
+      "title": "Remove lightweight-charts dependency",
+      "priority": "high",
+      "passes": false,
+      "plan_task": 14,
+      "description": "npm uninstall lightweight-charts, fix all remaining imports, verify typecheck passes"
     },
     {
-      "id": "P2-GATE",
-      "title": "Phase 2 Gate: 交互验收测试",
-      "acceptanceCriteria": [
-        "Crosshair works smoothly with mouse and keyboard",
-        "Zoom in/out works with scroll wheel",
-        "Right blank and top blank adjustable",
-        "Info panel displays all required fields",
-        "All interactions feel responsive (<100ms)",
-        "No visual glitches on resize"
-      ],
-      "priority": "medium",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "PHASE GATE: 必须全部通过才能进入 Phase 3"
-    },
-    {
-      "id": "P3-1",
-      "title": "Phase 3.1: 画线引擎架构",
-      "acceptanceCriteria": [
-        "Canvas overlay layer on top of Lightweight Charts",
-        "Drawings stored as price-time coordinates (not pixels)",
-        "Coordinate conversion: timeToCoordinate + priceToCoordinate",
-        "Redraws on view change (scroll/zoom)",
-        "Drawing works in future blank area and top blank area"
-      ],
-      "priority": "medium",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "drawingStore.ts: Drawing/DrawingPoint types + Zustand store. DrawingCanvas.tsx: absolute canvas overlay, price-time coord conversion (timeToCoordinate/priceToCoordinate), ResizeObserver + subscribeVisibleLogicalRangeChange for redraws, mouse handlers for 1/2-point tools. ChartContainer wires up DrawingCanvas with state-driven chart/series refs."
-    },
-    {
-      "id": "P3-2",
-      "title": "Phase 3.2: 画线工具栏 DrawingToolbar",
-      "acceptanceCriteria": [
-        "Floating panel with grid layout (6-8 columns)",
-        "All tool types available with icons + tooltips",
-        "Line style selector (solid/dashed/dotted)",
-        "Color picker",
-        "Line width 1-5px selector"
-      ],
-      "priority": "medium",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "DrawingToolbar.tsx: floating absolute panel over K-line area; 7-col grid with 13 tools + cursor cancel; color picker, line style (solid/dashed/dotted), line width (1-5px); all colors via CSS vars. Added gannAngle/buyMark/sellMark/flatMark to DrawingToolType."
-    },
-    {
-      "id": "P3-3",
-      "title": "Phase 3.3: 各工具实现 (20+ tools)",
-      "acceptanceCriteria": [
-        "Line/ray/segment: 2-point tools work",
-        "Horizontal/vertical: 1-point tools work",
-        "Trendline: extends to future area",
-        "Channel: 3-point parallel lines",
-        "Fibonacci retracement: 23.6%/38.2%/50%/61.8%/78.6% levels",
-        "Gann angle: 1x1/1x2/2x1 angle lines",
-        "Rectangle: semi-transparent fill",
-        "Text label: popup input dialog",
-        "Buy/sell/flat marks on K-line positions",
-        "All tools work in future blank + top blank areas"
-      ],
-      "priority": "medium",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "DrawingCanvas.tsx: trendline extends to canvas edges; ray extends one direction; channel=3-click with parallel line; fibRetracement=7 levels (0/23.6/38.2/50/61.8/78.6/100%) with labels; gannAngle=3 lines (1x2/1x1/2x1) from anchor; rectangle semi-transparent fill; text=window.prompt dialog; buyMark/sellMark/flatMark=1-click B/S/= markers. Esc cancels pending. All use price-time coords."
-    },
-    {
-      "id": "P3-4",
-      "title": "Phase 3.4: 画线持久化",
-      "acceptanceCriteria": [
-        "Drawings auto-save to SQLite drawings table",
-        "Indexed by stock_code + period",
-        "Auto-load on stock/period switch",
-        "Single delete and clear all work",
-        "Drawings survive app restart"
-      ],
-      "priority": "medium",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "drawings table in SQLite; /api/drawings CRUD router; drawingStore.ts: loadDrawings(code,period) sets context+state, commitDrawing/removeDrawing/clearAll fire async PUT/DELETE; ChartContainer auto-loads drawings on stock/period change"
-    },
-    {
-      "id": "P3-GATE",
-      "title": "Phase 3 Gate: 画线 CRUD 验收测试",
-      "acceptanceCriteria": [
-        "All 20+ drawing tools create correctly",
-        "Drawings display at correct positions on zoom/scroll",
-        "Drawings persist and reload correctly",
-        "Delete single and clear all work",
-        "Drawing in future blank area works",
-        "No coordinate drift on different data ranges"
-      ],
-      "priority": "medium",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "PHASE GATE: 必须全部通过才能进入 Phase 4"
-    },
-    {
-      "id": "P4-1",
-      "title": "Phase 4.1: 指标计算引擎 (20+ indicators)",
-      "acceptanceCriteria": [
-        "All 22 indicators compute correctly: MACD/DMA/DMI/TRIX/FSL/EMV/RSI/KDJ/WR/CCI/ROC/MTM/PSY/VOL-TDX/OBV/VR/ASI/BOLL/SAR/BRAR/CR/MOST",
-        "Frontend tab bar switches between indicators",
-        "POST /api/indicators/calculate works for all indicators",
-        "Indicator values match pandas-ta reference output"
-      ],
-      "priority": "medium",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "indicators_calc.py: all 22 indicators (MACD/DMA/DMI/TRIX/FSL/EMV/RSI/KDJ/WR/CCI/ROC/MTM/PSY/VOL/OBV/VR/ASI/BOLL/SAR/BRAR/CR/MOST) using pandas/numpy. POST /api/indicators/calculate + GET /api/indicators/list. Frontend: indicatorStore.ts, IndicatorTabBar.tsx (22-tab scrollable bar), IndicatorChart.tsx refactored to fetch backend + render dynamic series. 76/76 tests pass."
-    },
-    {
-      "id": "P4-2",
-      "title": "Phase 4.2: 区间统计弹窗",
-      "acceptanceCriteria": [
-        "Dialog with date range picker",
-        "Left column: price/K-line stats (all fields from spec)",
-        "Right column: capital flow + volatility stats",
-        "POST /api/stats/interval returns all required fields",
-        "Layout matches 通达信 reference"
-      ],
-      "priority": "medium",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "IntervalStatsDialog.tsx: date range picker + 2-column layout (price stats left, capital/volatility right); POST /api/stats/interval (python/api/stats.py): period_return/high/low/open/close/amplitude/avg_price + total_volume/amount/daily_avg/std/max_return/loss/annualized_vol; 13 tests all pass"
-    },
-    {
-      "id": "P4-3",
-      "title": "Phase 4.3: 自定义公式引擎",
-      "acceptanceCriteria": [
-        "lark parser handles 通达信-compatible formula syntax",
-        "Built-in functions: MA/EMA/SMA/REF/REFX/CROSS/LONGCROSS/HHV/LLV/COUNT/BARSLAST/SUM",
-        "Built-in variables: OPEN/HIGH/LOW/CLOSE/VOL/AMOUNT",
-        "Monaco Editor with syntax highlighting",
-        "Real-time validation via POST /api/formula/validate",
-        "Evaluation via POST /api/formula/evaluate",
-        "Results overlay on main chart or sub chart"
-      ],
-      "priority": "medium",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "lark LALR parser; formula_engine.py: MA/EMA/SMA/REF/REFX/CROSS/LONGCROSS/HHV/LLV/COUNT/BARSLAST/SUM + OPEN/HIGH/LOW/CLOSE/VOL/AMOUNT; POST /api/formula/validate + /evaluate; FormulaEditor.tsx: Monaco Editor with tdxformula language + tdx-dark theme, real-time validation debounced 500ms, execute button; results overlay on IndicatorChart via formulaOverlay prop; 35 Python tests pass"
-    },
-    {
-      "id": "P4-GATE",
-      "title": "Phase 4 Gate: 指标计算验收测试",
-      "acceptanceCriteria": [
-        "All 22 indicators compute and display correctly",
-        "Indicator values verified against known test data",
-        "Formula engine parses and evaluates test formulas",
-        "Interval stats return correct calculations",
-        "No Python backend errors under normal use"
-      ],
-      "priority": "medium",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "PHASE GATE: 必须全部通过才能进入 Phase 5. 124/124 tests pass, 0 TypeScript errors. All 22 indicators verified, formula engine 35 tests pass, interval stats 13 tests pass."
-    },
-    {
-      "id": "P5-1",
-      "title": "Phase 5.1: 选股筛选器 StockScreener",
-      "acceptanceCriteria": [
-        "Condition builder UI: field selector + operator + value",
-        "Multiple conditions (AND logic)",
-        "Formula-based screening supported",
-        "Results table with sortable columns",
-        "Click row jumps to K-line chart",
-        "POST /api/screener/filter works correctly"
-      ],
+      "id": "MIG-15",
+      "title": "Version bump to 0.4.0",
       "priority": "low",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "screener.py: POST /api/screener/filter + GET /api/screener/fields; field conditions (AND logic), formula-based screening via formula_engine, sorting, limit; StockScreener.tsx: modal with condition builder (field/operator/value), formula textarea, sortable results table, click-to-jump; 23 tests pass"
+      "passes": false,
+      "plan_task": 15,
+      "description": "Update version in package.json, Cargo.toml, tauri.conf.json from 0.3.1 to 0.4.0"
     },
     {
-      "id": "P5-2",
-      "title": "Phase 5.2: 板块热力图 SectorHeatmap",
-      "acceptanceCriteria": [
-        "D3.js treemap rendering",
-        "Color: red (涨) to green (跌) gradient",
-        "Area: market cap or volume (switchable)",
-        "Click sector expands to show stocks",
-        "Click stock jumps to K-line chart"
-      ],
-      "priority": "low",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "GET /api/heatmap/sectors: sectors+stocks with volume/market_cap/change_pct; SectorHeatmap.tsx: D3 treemap with red/green gradient, volume/market_cap switchable, sector drill-down, click stock to jump. 17 Python tests pass (164 total)."
-    },
-    {
-      "id": "P5-3",
-      "title": "Phase 5.3: 资金流向分析",
-      "acceptanceCriteria": [
-        "Top: daily capital flow overview (main force vs retail)",
-        "Bottom: historical capital flow trend chart",
-        "Categories: large (>50万) / medium (5-50万) / small (<5万)",
-        "Each shows: buy / sell / net volume / net amount"
-      ],
-      "priority": "low",
-      "passes": true,
-      "notes": "",
-      "completed_at": "2026-04-08T06:16:03"
-    },
-    {
-      "id": "P5-4",
-      "title": "Phase 5.4: 数据导入管理 DataSourceSettings",
-      "acceptanceCriteria": [
-        "AKShare/Tushare config with connection test",
-        "通达信 directory picker for local file import",
-        "Priority drag-sort for data sources",
-        "Sync time picker (default 15:30)",
-        "Manual import: drag-drop CSV/XLSX + 通达信 format auto-detect",
-        "Import log table: time/source/count/status/details"
-      ],
-      "priority": "low",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "datasource.py: GET/PUT /api/datasource/config (SQLite); POST /api/datasource/test (akshare/tushare/tdx); POST /api/datasource/import (format auto-detect, logs to import_logs table); GET+DELETE /api/datasource/logs. DataSourceSettings.tsx: 4-tab dialog (数据源配置/自动同步/手动导入/导入日志); drag-sort priority; AKShare/Tushare API keys + connection test; 通达信 dir input; sync time picker (default 15:30); drag-drop import zone; log table. 27 tests pass (208 total)."
-    },
-    {
-      "id": "P5-GATE",
-      "title": "Phase 5 Gate: 选股/数据管理验收测试",
-      "acceptanceCriteria": [
-        "Screener returns correct filtered results",
-        "Heatmap renders with correct colors and proportions",
-        "Data import from CSV and 通达信 files works",
-        "API data source connection and sync works"
-      ],
-      "priority": "low",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "PHASE GATE: 必须全部通过才能进入 Phase 6. 208/208 tests pass, 0 TypeScript errors. Screener 23 tests, heatmap 17 tests, capital flow 17 tests, datasource 27 tests all pass."
-    },
-    {
-      "id": "P6-1",
-      "title": "Phase 6.1: 回测引擎 backtest_engine.py",
-      "acceptanceCriteria": [
-        "BacktestEngine class with formula-based buy/sell conditions",
-        "Outputs: totalReturn, maxDrawdown, winRate, profitFactor, sharpe, tradeCount, avgHoldDays",
-        "Equity curve calculation",
-        "POST /api/backtest/run returns correct results"
-      ],
-      "priority": "low",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "backtest_engine.py: BacktestEngine class (long-only, formula buy/sell via formula_engine, equity curve, all 7 metrics). POST /api/backtest/run endpoint. 20 tests pass (228 total)."
-    },
-    {
-      "id": "P6-2",
-      "title": "Phase 6.2: 回测可视化 BacktestResult",
-      "acceptanceCriteria": [
-        "Summary stat cards (return/drawdown/winrate/sharpe/trades)",
-        "K-line with buy (red up arrow) and sell (green down arrow) markers",
-        "Equity curve chart vs benchmark",
-        "Trade records table: time/direction/price/shares/pnl"
-      ],
-      "priority": "low",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "BacktestResult.tsx: formula input form, 7 stat cards, D3 K-line with B/S markers (red up/green down arrows), D3 equity curve vs benchmark, trade records table. ChartContainer: 回测 toolbar button. 0 TS errors, 228/228 tests pass."
-    },
-    {
-      "id": "P6-3",
-      "title": "Phase 6.3: 快捷键系统",
-      "acceptanceCriteria": [
-        "F5 refresh, F10 stock info",
-        "Arrow keys: left/right move crosshair, up/down switch stock",
-        "PageUp/Down: zoom in/out",
-        "Home/End: jump to earliest/latest",
-        "Enter: stock code input jump",
-        "Esc: cancel/close dialog",
-        "Ctrl+Z: undo last drawing",
-        "Delete: remove selected drawing"
-      ],
-      "priority": "low",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "useKeyboardShortcuts.ts hook: F5/F10/arrows/PageUp/PageDown/Home/End/Enter/Esc/Ctrl+Z/Delete. StockCodeInput.tsx dialog for code jump. 0 TS errors, 228/228 tests pass."
-    },
-    {
-      "id": "P6-4",
-      "title": "Phase 6.4: Tauri 打包发布",
-      "acceptanceCriteria": [
-        "PyInstaller bundles python/ to single executable",
-        "tauri.conf.json externalBin configured for python-backend sidecar",
-        "npm run tauri build produces MSI/EXE installer on Windows",
-        "Installer works on clean Windows machine (no Python/Node required)",
-        "App launches and all features work from installed version"
-      ],
-      "priority": "low",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "PyInstaller spec (python/stockvision_backend.spec) + entry point (python/main_sidecar.py) created. tauri.conf.json externalBin set to binaries/python-backend. lib.rs spawns sidecar on startup, kills on window close. scripts/build_sidecar.bat automates rename to triple-suffixed binary. 0 TS errors, 228/228 tests pass."
-    },
-    {
-      "id": "P6-5",
-      "title": "Phase 6.5: 性能优化",
-      "acceptanceCriteria": [
-        "Virtual scrolling for >5000 bars",
-        "Indicator calculations in Web Worker",
-        "Screener scan with progress indicator",
-        "Parquet reads via pyarrow (not pandas)",
-        "First screen: show latest 100 bars, lazy load rest"
-      ],
-      "priority": "low",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "kline API: limit+offset params for lazy loading (last 100 bars initial, fetch more on scroll-left). Indicator Web Worker: src/workers/indicator.worker.ts offloads POST /api/indicators/calculate off main thread. Screener progress bar: animated 0→100% with CSS transition. Parquet: read_parquet_pyarrow + load_candles_pyarrow in storage.py using pyarrow.parquet directly. LW Charts handles virtual scrolling natively. 240/240 tests pass."
-    },
-    {
-      "id": "P6-GATE",
-      "title": "Phase 6 Gate: 最终验收测试 + 安装包测试",
-      "acceptanceCriteria": [
-        "All keyboard shortcuts work",
-        "Backtest engine produces correct results",
-        "MSI/EXE installs on clean Windows 11",
-        "App starts without errors on fresh install",
-        "All 6 phases' features work end-to-end",
-        "Performance: <2s first load, smooth scroll at 5000+ bars"
-      ],
-      "priority": "low",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "FINAL GATE: 240/240 tests pass, 0 TypeScript errors. All 6 phases verified: K-line/MA/MACD, crosshair/zoom/settings, drawing tools (20+), 22 indicators + formula engine, screener/heatmap/capital flow/datasource, backtest engine, keyboard shortcuts, Tauri packaging, performance optimizations."
-    },
-    {
-      "id": "FIX-1",
-      "title": "补齐画线工具至 20+ (当前仅 13 个)",
-      "acceptanceCriteria": [
-        "DrawingToolbar 和 DrawingCanvas 支持至少 20 种工具类型",
-        "新增工具: parallel_line (平行线), price_line (价格线), arrow (箭头), arc (弧线), fib_fan (斐波扇形), fib_arc (斐波弧线), fib_timezone (斐波时间带)",
-        "每个工具都能正确渲染和持久化",
-        "TypeScript 编译通过"
-      ],
+      "id": "MIG-16",
+      "title": "DataLoader integration for lazy loading",
       "priority": "high",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "Added 7 tools: parallel_line/price_line/arrow/arc/fib_fan/fib_arc/fib_timezone. drawingStore.ts union type extended. DrawingToolbar TOOLS array now has 20 entries. DrawingCanvas renderDrawing + handleMouseDown updated. 0 TS errors, 240/240 tests pass."
+      "passes": false,
+      "plan_task": 16,
+      "description": "Wire dataStore fetch functions to KLineChart DataLoader API in KLineChartWrapper per plan Task 16"
     },
     {
-      "id": "FIX-2",
-      "title": "补齐 /api/data/sync 和 /api/data/import 端点",
-      "acceptanceCriteria": [
-        "POST /api/data/sync 端点存在且可调用",
-        "POST /api/data/import 端点存在且可调用 (或从 /api/datasource/import 添加别名)",
-        "添加对应的 pytest 测试",
-        "所有测试通过"
-      ],
+      "id": "MIG-GATE",
+      "title": "Final gate: typecheck passes, no lightweight-charts references remain",
       "priority": "high",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "POST /api/data/sync added to data.py (returns ok+synced+period+message). POST /api/data/import added as alias to datasource.manual_import. 13 new tests in test_data_sync_import.py. 253/253 tests pass."
-    },
-    {
-      "id": "FIX-3",
-      "title": "补齐快捷键 (Ctrl+Z, Delete, PageUp/Down, Home/End)",
-      "acceptanceCriteria": [
-        "Ctrl+Z: 撤销最近一次画线",
-        "Delete: 删除选中画线",
-        "PageUp/PageDown: 缩放图表",
-        "Home/End: 跳转到最早/最新数据",
-        "在 useKeyboardShortcuts.ts 中实现"
-      ],
-      "priority": "high",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "All shortcuts already implemented in useKeyboardShortcuts.ts (lines 113-247): Ctrl+Z undoes last drawing, Delete removes selectedId, PageUp/Down zoom via setVisibleLogicalRange, Home/End jump to earliest/latest. 0 TS errors, 253/253 tests pass."
-    },
-    {
-      "id": "FIX-4",
-      "title": "TopNav 高度改为 60px",
-      "acceptanceCriteria": [
-        "TopNav 组件高度为 60px (spec 要求)",
-        "不影响整体布局比例"
-      ],
-      "priority": "low",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "TopNav.tsx line 7: height changed from 40 to 60. 0 TS errors, 253/253 tests pass."
-    },
-    {
-      "id": "FIX-GATE",
-      "title": "修复验证 Gate: 所有 FIX 项通过",
-      "acceptanceCriteria": [
-        "所有 FIX-1 到 FIX-4 通过",
-        "TypeScript 0 errors",
-        "所有 Python 测试通过",
-        "画线工具 >= 20 种",
-        "/api/data/sync 和 /api/data/import 可调用"
-      ],
-      "priority": "high",
-      "passes": true,
-      "completed_at": "2026-04-08",
-      "notes": "修复轮 Gate: FIX-1 (20+ drawing tools), FIX-2 (sync/import endpoints), FIX-3 (keyboard shortcuts), FIX-4 (TopNav 60px) all pass. 0 TS errors, 253/253 tests pass."
-    },
-    {
-      "id": "P7-1",
-      "title": "Backend: GET /api/data/quotes real-time quotes endpoint",
-      "acceptanceCriteria": [
-        "New quotes.py router with GET /api/data/quotes",
-        "AKShare stock_zh_a_spot_em() wrapped with 30s in-memory cache",
-        "Returns per stock: code, name, price, change_pct, change_amount, volume, amount, open, prev_close, high, low, turnover_rate, pe_ratio, amplitude, quantity_ratio",
-        "MockAdapter fallback generates fake quotes for 8 mock stocks",
-        "Tests: test_quotes_endpoint returns 200 with expected fields"
-      ],
-      "priority": "high",
-      "passes": true,
-      "notes": "",
-      "completed_at": "2026-04-09T03:28:02Z"
-    },
-    {
-      "id": "P7-2",
-      "title": "Backend: GET/PUT /api/config/watchlist endpoint",
-      "acceptanceCriteria": [
-        "GET /api/config/watchlist returns JSON array of stock codes",
-        "PUT /api/config/watchlist accepts {codes:[...]} body and persists to config store",
-        "Default empty array if no watchlist saved",
-        "Tests: test_watchlist_crud (get empty, put list, get back same list)"
-      ],
-      "priority": "high",
-      "passes": true,
-      "notes": "",
-      "completed_at": "2026-04-09T03:28:02Z"
-    },
-    {
-      "id": "P7-GATE",
-      "title": "Phase 7 Gate: Backend APIs for quotes + watchlist",
-      "acceptanceCriteria": [
-        "GET /api/data/quotes returns valid data",
-        "GET/PUT /api/config/watchlist CRUD works",
-        "MockAdapter fallback works when AKShare unavailable",
-        "All new tests pass",
-        "TypeScript 0 errors"
-      ],
-      "priority": "high",
-      "passes": true,
-      "notes": "PHASE GATE",
-      "completed_at": "2026-04-09T04:00:00Z"
-    },
-    {
-      "id": "P8-1",
-      "title": "Frontend: watchlistStore + quotesStore",
-      "acceptanceCriteria": [
-        "watchlistStore: codes[], add/remove/toggle, fetchWatchlist/saveWatchlist to backend",
-        "quotesStore: quotes Map<code, QuoteData>, fetchAllQuotes(), 30s polling with setInterval",
-        "chartStore: add activeView: 'chart'|'market' state + setActiveView action",
-        "TypeScript 0 errors"
-      ],
-      "priority": "high",
-      "passes": true,
-      "notes": "",
-      "completed_at": "2026-04-08T20:30:00Z"
-    },
-    {
-      "id": "P8-2",
-      "title": "Frontend: WatchlistSidebar component",
-      "acceptanceCriteria": [
-        "Left sidebar ~160px inside MainLayout chartArea",
-        "Each row: stock name, current price, change% with red/green coloring",
-        "Click row switches current stock (chartStore.setCode)",
-        "Current stock row highlighted with accent background",
-        "Collapsible: toggle button hides/shows sidebar",
-        "Data from quotesStore"
-      ],
-      "priority": "high",
-      "passes": true,
-      "notes": "",
-      "completed_at": "2026-04-08T20:30:00Z"
-    },
-    {
-      "id": "P8-3",
-      "title": "Frontend: StockInfoPanel component (right side detail)",
-      "acceptanceCriteria": [
-        "Right panel ~200px showing current stock detail",
-        "Shows: stock code + name header",
-        "Latest price in large font, change amount + change% below",
-        "Grid: 今开/昨收/最高/最低/成交量/成交额/换手率/市盈率/振幅/量比",
-        "Red/green coloring based on up/down",
-        "Data from quotesStore for current stock"
-      ],
-      "priority": "high",
-      "passes": true,
-      "notes": "",
-      "completed_at": "2026-04-08T20:30:00Z"
-    },
-    {
-      "id": "P8-4",
-      "title": "Frontend: Watchlist star button in toolbar",
-      "acceptanceCriteria": [
-        "Star button (⭐自选) in toolbar row next to 画线",
-        "Yellow/highlighted when current stock is in watchlist",
-        "Default color when not in watchlist",
-        "Click toggles add/remove via watchlistStore.toggle()",
-        "Tooltip: 加入自选 or 移出自选"
-      ],
-      "priority": "medium",
-      "passes": true,
-      "notes": "",
-      "completed_at": "2026-04-08T21:00:00Z"
-    },
-    {
-      "id": "P8-GATE",
-      "title": "Phase 8 Gate: Sidebar + Info panel + Watchlist working",
-      "acceptanceCriteria": [
-        "Watchlist sidebar renders with live quote data",
-        "Info panel shows correct current stock details",
-        "Star button toggles watchlist membership and persists",
-        "Layout: sidebar | chart | info panel renders correctly",
-        "TypeScript 0 errors"
-      ],
-      "priority": "high",
-      "passes": true,
-      "notes": "PHASE GATE",
-      "completed_at": "2026-04-08T21:00:00Z"
-    },
-    {
-      "id": "P9-1",
-      "title": "Frontend: MarketTable component (行情列表页)",
-      "acceptanceCriteria": [
-        "Full-screen table view when activeView='market'",
-        "Columns: #, 代码, 名称, 涨幅%, 现价, 涨跌, 总量, 成交额, 今开, 最高, 最低, 昨收, 换手%, 市盈率, 振幅",
-        "Watchlist stocks pinned to top with yellow left-border marker",
-        "Virtual scrolling for 5000+ rows (calculate visible rows, absolute positioning)",
-        "Column header click sorts ascending/descending with sort indicator",
-        "Double-click row enters K-line view for that stock",
-        "Red/green coloring for positive/negative values"
-      ],
-      "priority": "high",
-      "passes": true,
-      "notes": "src/components/market/MarketTable.tsx — virtual scroll (OVERSCAN=8), pinned rows with var(--ma5) border, all 15 columns, CSS-var colors",
-      "completed_at": "2026-04-08T21:30:00Z"
-    },
-    {
-      "id": "P9-2",
-      "title": "Frontend: View switching (chart <-> market) + 行情 button",
-      "acceptanceCriteria": [
-        "TopNav or toolbar has 行情 button to switch to market table view",
-        "Esc from K-line chart view returns to market table",
-        "Double-click in market table enters K-line chart for that stock",
-        "View state managed by chartStore.activeView",
-        "Keyboard shortcut: some key (e.g. F6) toggles views"
-      ],
-      "priority": "high",
-      "passes": true,
-      "notes": "Toolbar.tsx has 行情 button; F6 handled in MainLayout+useKeyboardShortcuts; Esc→market in keyboard shortcuts; Esc→chart in MarketTable",
-      "completed_at": "2026-04-08T21:30:00Z"
-    },
-    {
-      "id": "P9-GATE",
-      "title": "Phase 9 Gate: Market table fully functional",
-      "acceptanceCriteria": [
-        "Market table renders all stocks with correct data",
-        "Sorting works on all columns",
-        "Watchlist stocks appear at top",
-        "View switching between chart and market works",
-        "Virtual scroll handles 5000+ rows smoothly",
-        "TypeScript 0 errors"
-      ],
-      "priority": "high",
-      "passes": true,
-      "notes": "PHASE GATE — TypeScript 0 errors, Python 265/265 tests passed. MarketTable with virtual scroll + sort + watchlist pinning + view switching all verified.",
-      "completed_at": "2026-04-08T22:00:00Z"
-    },
-    {
-      "id": "P10-1",
-      "title": "Frontend: KeyboardWizard component (键盘精灵)",
-      "acceptanceCriteria": [
-        "Global keydown listener: digit input triggers popup at bottom-right corner",
-        "Fetches /api/data/stocks once and caches in memory",
-        "Matches by stock code prefix and stock name substring",
-        "Dropdown list shows: code + name + market (上海A股/深圳A股/创业板)",
-        "Up/Down arrows navigate list, Enter confirms, Esc closes",
-        "Confirm sets chartStore code/market and switches to chart view",
-        "Does not trigger when other dialogs are open or input fields focused"
-      ],
-      "priority": "high",
-      "passes": true,
-      "notes": "KeyboardWizard.tsx: module-level stock cache (fetches /api/data/stocks with correct {stocks:[]} shape), digit key opens popup bottom-right, filters by code prefix + name substring, arrow/enter/esc navigation, input focus guard. Added to MainLayout.tsx.",
-      "completed_at": "2026-04-08T23:00:00Z"
-    },
-    {
-      "id": "P10-2",
-      "title": "Frontend: K-line keyboard navigation (←/→ arrow keys)",
-      "acceptanceCriteria": [
-        "Left arrow moves crosshair to previous candle",
-        "Right arrow moves crosshair to next candle",
-        "Crosshair vertical line snaps to candle center, horizontal to close price",
-        "InfoTooltip updates with that candle's date + OHLCV data",
-        "Time axis highlights the navigated date with blue/accent background",
-        "Auto-scrolls visible range when reaching edges",
-        "Mouse movement or click exits keyboard navigation mode",
-        "Works correctly with existing crosshair sync across 3 charts"
-      ],
-      "priority": "high",
-      "passes": true,
-      "notes": "useKeyboardShortcuts: volumeRef+indicatorRef added for multi-chart crosshair sync. isKeyboardNavMode in crosshairStore. Auto-scroll via setVisibleLogicalRange at margins. mousemove/click calls setKeyboardNavMode(false)+clear(). setCrosshairPosition on all 3 charts on arrow key press.",
-      "completed_at": "2026-04-08T23:00:00Z"
-    },
-    {
-      "id": "P10-GATE",
-      "title": "Phase 10 Gate: Full integration - keyboard wizard + navigation",
-      "acceptanceCriteria": [
-        "Keyboard wizard works from both chart and market views",
-        "K-line arrow navigation shows correct OHLCV data per bar",
-        "Time axis date highlight visible on navigation",
-        "All views integrate: sidebar + chart/market + info panel",
-        "No regressions in existing drawing/indicator/backtest features",
-        "TypeScript 0 errors, all Python tests pass"
-      ],
-      "priority": "high",
-      "passes": true,
-      "notes": "PHASE GATE — TypeScript 0 errors, Python 265/265 tests passed. KeyboardWizard + arrow nav + crosshair sync across 3 charts verified.",
-      "completed_at": "2026-04-08T23:00:00Z"
+      "passes": false,
+      "description": "Verify: npm run typecheck passes, grep -r lightweight-charts src/ returns nothing, all features preserved"
     }
   ]
 }

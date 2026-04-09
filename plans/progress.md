@@ -567,3 +567,50 @@ created: 2026-04-07
 - All views integrate: sidebar + chart/market + info panel ✓
 - No regressions in existing drawing/indicator/backtest features (265/265 tests pass) ✓
 - TypeScript 0 errors, all Python tests pass ✓
+
+---
+
+## 2026-04-09 — KLineChart Migration (v0.3.1 → v0.4.0)
+
+### Goal
+Replace Lightweight Charts 4.x with KLineChart 10.x. Delete ~2000 lines of manual chart sync code.
+
+### Plan
+See `docs/superpowers/plans/2026-04-09-klinechart-migration.md` (17 tasks, MIG-1 through MIG-GATE).
+
+### Key files
+- Design spec: `docs/superpowers/specs/2026-04-09-klinechart-migration-design.md`
+- Plan: `docs/superpowers/plans/2026-04-09-klinechart-migration.md`
+- PRD: `plans/prd.json` (migration tasks)
+- Old PRD backup: `plans/prd-v031.json.bak`
+
+### KLineChart v10 API notes
+- `init(dom, options)` → creates chart, returns Chart instance
+- `chart.createIndicator(name, isStack, paneOptions)` → returns paneId
+- `chart.createOverlay(config)` → creates drawing overlay
+- `chart.setDataLoader({ getBars })` → data feeding
+- `chart.scrollToDataIndex(idx)` → keyboard nav
+- `chart.zoomAtCoordinate(scale)` → zoom
+- `chart.executeAction('onCrosshairChange', data)` → programmatic crosshair
+- `registerIndicator(template)` → custom indicators
+- `registerOverlay(template)` → custom overlays
+- Data format: `{ timestamp (ms), open, high, low, close, volume?, turnover? }`
+
+### Progress
+- [ ] MIG-1: Data adapter + theme
+- [ ] MIG-2: KLineChartWrapper
+- [ ] MIG-3: Overlay mapping + custom overlays
+- [ ] MIG-4: Custom indicators
+- [ ] MIG-5: ChartContainer rewrite
+- [ ] MIG-6: useKeyboardShortcuts adaptation
+- [ ] MIG-7: Register at entry
+- [ ] MIG-8: Simplify crosshairStore
+- [ ] MIG-9: Delete old files
+- [ ] MIG-10: DrawingBridge
+- [ ] MIG-11: BacktestResult migration
+- [ ] MIG-12: IndicatorChart deletion
+- [ ] MIG-13: DrawingContextMenu update
+- [ ] MIG-14: Remove LW Charts dep
+- [ ] MIG-15: Version bump
+- [ ] MIG-16: DataLoader integration
+- [ ] MIG-GATE: Final verification

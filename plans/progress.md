@@ -632,3 +632,25 @@ See `docs/superpowers/plans/2026-04-09-klinechart-migration.md` (17 tasks, MIG-1
 - `OverlayEventCallback` returns `void` (not boolean) — the plan's `onRightClick: () => false` was wrong.
 - `drawingStore.selectDrawing(id)` not `setSelectedId(id)`.
 - `drawingStore.activeStyle` not `defaultStyle`.
+
+## 2026-04-09 — MIG-2 through MIG-9, MIG-12, MIG-13, MIG-14 (Iteration 2)
+
+### What was built
+- **`src/components/chart/KLineChartWrapper.tsx`** (MIG-2): Single KLineChart instance replacing KLineChart+VolumeChart+IndicatorChart. Uses `setDataLoader` for data feeding. Creates MA indicators on main pane, VOL and MACD as separate panes. Subscribes `onCrosshairChange` to sync crosshairStore.
+- **`src/chart/customOverlays.ts`** (MIG-3): Registers 17 custom overlays: sv_arrow, sv_buyMark, sv_sellMark, sv_flatMark, sv_ellipse, sv_fibExtension, sv_measure, plus 10 simple two-point overlays (gann, fib variants, etc.).
+- **`src/chart/customIndicators.ts`** (MIG-4): Registers FSL, MOST, ASI, BRAR custom indicators with JS calculation logic.
+- **`src/components/chart/ChartContainer.tsx`** (MIG-5): Rewritten to use single KLineChartWrapper ref. Removed: IChartApi, KLineChart, VolumeChart, IndicatorChart, Crosshair, InfoTooltip, useCrosshairSync, useWheelZoom imports. Added DrawingBridge with chart ref.
+- **`src/hooks/useKeyboardShortcuts.ts`** (MIG-6): Rewritten for KLineChart API: `chart.scrollToDataIndex`, `chart.zoomAtCoordinate`, `chart.executeAction`, `chart.scrollToRealTime`.
+- **`src/main.tsx`** (MIG-7): Added `registerCustomIndicators()` and `registerCustomOverlays()` calls before React render.
+- **`src/stores/crosshairStore.ts`** (MIG-8): Simplified to only `activeBarIndex + isKeyboardNavMode`. Removed snapX, mouseY, priceAtY, timeLabel, activeChart.
+- **Deleted files** (MIG-9): KLineChart.tsx, VolumeChart.tsx, Crosshair.tsx, InfoTooltip.tsx, useCrosshairSync.ts, useWheelZoom.ts, useChartSync.ts, darkTheme.ts, indicator.worker.ts.
+- **`src/types/chart.ts`** already existed (MIG-12): FormulaSeries type moved here. Updated ChartContainer import. Deleted IndicatorChart.tsx.
+- **`src/components/chart/DrawingContextMenu.tsx`** (MIG-13): Added `chart?: Chart | null` prop. `handleToggleLock` now calls `chart.overrideOverlay({ id, lock })` to sync with KLineChart.
+- **`package.json`** (MIG-14): Removed `lightweight-charts` dependency. Zero LW Charts imports remain.
+
+### Key patterns learned
+- KLineChart data reload: call `chart.setDataLoader()` again when candles change — this triggers a fresh data fetch.
+- `createIndicator` with `{ id: paneId }` PaneOptions targets an existing pane for indicator swap.
+- `chart.removeIndicator({ paneId })` removes all indicators from a pane by ID.
+- crosshairStore simplified: only `activeBarIndex` needed for keyboard nav — KLineChart handles visual crosshair natively.
+- DrawingContextMenu now receives `chart` prop from ChartContainer for overrideOverlay calls.

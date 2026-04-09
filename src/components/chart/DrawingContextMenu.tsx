@@ -1,13 +1,15 @@
 import { useEffect, useRef, useCallback } from 'react';
+import type { Chart } from 'klinecharts';
 import { useDrawingStore } from '@/stores/drawingStore';
 
 interface Props {
   x: number;
   y: number;
+  chart?: Chart | null;
   onClose: () => void;
 }
 
-export function DrawingContextMenu({ x, y, onClose }: Props) {
+export function DrawingContextMenu({ x, y, chart, onClose }: Props) {
   const menuRef = useRef<HTMLDivElement>(null);
   const selectedId = useDrawingStore((s) => s.selectedId);
   const drawings = useDrawingStore((s) => s.drawings);
@@ -41,24 +43,17 @@ export function DrawingContextMenu({ x, y, onClose }: Props) {
     };
   }, [handleClickOutside, handleKeyDown]);
 
-  // Adjust position so menu doesn't overflow viewport
   useEffect(() => {
     if (!menuRef.current) return;
     const rect = menuRef.current.getBoundingClientRect();
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    if (rect.right > vw) {
-      menuRef.current.style.left = `${x - rect.width}px`;
-    }
-    if (rect.bottom > vh) {
-      menuRef.current.style.top = `${y - rect.height}px`;
-    }
+    if (rect.right > vw) menuRef.current.style.left = String(x - rect.width) + 'px';
+    if (rect.bottom > vh) menuRef.current.style.top = String(y - rect.height) + 'px';
   }, [x, y]);
 
   const handleEdit = () => {
-    if (selectedId) {
-      useDrawingStore.getState().setEditing(selectedId);
-    }
+    if (selectedId) useDrawingStore.getState().setEditing(selectedId);
     onClose();
   };
 
@@ -71,8 +66,12 @@ export function DrawingContextMenu({ x, y, onClose }: Props) {
   };
 
   const handleToggleLock = () => {
-    if (selectedId) {
+    if (selectedId && selectedDrawing) {
+      const newLock = !selectedDrawing.locked;
       useDrawingStore.getState().toggleLock(selectedId);
+      if (chart) {
+        chart.overrideOverlay({ id: selectedId, lock: newLock });
+      }
     }
     onClose();
   };
@@ -91,30 +90,15 @@ export function DrawingContextMenu({ x, y, onClose }: Props) {
     onClose();
   };
 
-  const items: Array<{
-    label: string;
-    onClick: () => void;
-    disabled?: boolean;
-  }> = selectedDrawing
+  const items: Array<{ label: string; onClick: () => void; disabled?: boolean }> = selectedDrawing
     ? [
         { label: '编辑画线', onClick: handleEdit },
         { label: '删除画线', onClick: handleDelete },
-        {
-          label: selectedDrawing.locked ? '解锁画线' : '锁定画线',
-          onClick: handleToggleLock,
-        },
+        { label: selectedDrawing.locked ? '解锁画线' : '锁定画线', onClick: handleToggleLock },
       ]
     : [
-        {
-          label: '撤销上一步',
-          onClick: handleUndo,
-          disabled: drawings.length === 0,
-        },
-        {
-          label: '清除所有画线',
-          onClick: handleClearAll,
-          disabled: drawings.length === 0,
-        },
+        { label: '撤销上一步', onClick: handleUndo, disabled: drawings.length === 0 },
+        { label: '清除所有画线', onClick: handleClearAll, disabled: drawings.length === 0 },
       ];
 
   return (
@@ -146,9 +130,7 @@ export function DrawingContextMenu({ x, y, onClose }: Props) {
             whiteSpace: 'nowrap',
           }}
           onMouseEnter={(e) => {
-            if (!item.disabled) {
-              (e.currentTarget as HTMLDivElement).style.background = '#2a2a2e';
-            }
+            if (!item.disabled) (e.currentTarget as HTMLDivElement).style.background = '#2a2a2e';
           }}
           onMouseLeave={(e) => {
             (e.currentTarget as HTMLDivElement).style.background = 'transparent';

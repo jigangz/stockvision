@@ -18,65 +18,73 @@
       "id": "MIG-2",
       "title": "KLineChartWrapper core component with multi-pane layout",
       "priority": "high",
-      "passes": false,
+      "passes": true,
       "plan_task": 2,
-      "description": "Create src/components/chart/KLineChartWrapper.tsx per plan Task 2. Single init() with MA, VOL, MACD panes."
+      "description": "Create src/components/chart/KLineChartWrapper.tsx per plan Task 2. Single init() with MA, VOL, MACD panes.",
+      "completed_at": "2026-04-09"
     },
     {
       "id": "MIG-3",
       "title": "Overlay mapping + custom overlay registrations (20 overlays)",
       "priority": "high",
-      "passes": false,
+      "passes": true,
       "plan_task": 3,
-      "description": "Create src/chart/overlayMapping.ts and src/chart/customOverlays.ts per plan Task 3"
+      "description": "Create src/chart/overlayMapping.ts and src/chart/customOverlays.ts per plan Task 3",
+      "completed_at": "2026-04-09"
     },
     {
       "id": "MIG-4",
       "title": "Custom indicators (FSL, MOST, ASI, BRAR) registration",
       "priority": "high",
-      "passes": false,
+      "passes": true,
       "plan_task": 4,
-      "description": "Create src/chart/customIndicators.ts per plan Task 4"
+      "description": "Create src/chart/customIndicators.ts per plan Task 4",
+      "completed_at": "2026-04-09"
     },
     {
       "id": "MIG-5",
       "title": "Rewrite ChartContainer for KLineChartWrapper integration",
       "priority": "high",
-      "passes": false,
+      "passes": true,
       "plan_task": 5,
-      "description": "Rewrite src/components/chart/ChartContainer.tsx per plan Task 5. Remove LW Charts refs, use single KLineChartWrapper."
+      "description": "Rewrite src/components/chart/ChartContainer.tsx per plan Task 5. Remove LW Charts refs, use single KLineChartWrapper.",
+      "completed_at": "2026-04-09"
     },
     {
       "id": "MIG-6",
       "title": "Adapt useKeyboardShortcuts for KLineChart API",
       "priority": "high",
-      "passes": false,
+      "passes": true,
       "plan_task": 6,
-      "description": "Rewrite src/hooks/useKeyboardShortcuts.ts per plan Task 6. Use scrollToDataIndex, zoomAtCoordinate, executeAction."
+      "description": "Rewrite src/hooks/useKeyboardShortcuts.ts per plan Task 6. Use scrollToDataIndex, zoomAtCoordinate, executeAction.",
+      "completed_at": "2026-04-09"
     },
     {
       "id": "MIG-7",
       "title": "Register custom code at app entry (main.tsx)",
       "priority": "high",
-      "passes": false,
+      "passes": true,
       "plan_task": 7,
-      "description": "Add registerCustomIndicators() and registerCustomOverlays() to src/main.tsx per plan Task 7"
+      "description": "Add registerCustomIndicators() and registerCustomOverlays() to src/main.tsx per plan Task 7",
+      "completed_at": "2026-04-09"
     },
     {
       "id": "MIG-8",
       "title": "Simplify crosshairStore for native KLineChart crosshair",
       "priority": "medium",
-      "passes": false,
+      "passes": true,
       "plan_task": 8,
-      "description": "Rewrite src/stores/crosshairStore.ts per plan Task 8. Keep only activeBarIndex + isKeyboardNavMode."
+      "description": "Rewrite src/stores/crosshairStore.ts per plan Task 8. Keep only activeBarIndex + isKeyboardNavMode.",
+      "completed_at": "2026-04-09"
     },
     {
       "id": "MIG-9",
       "title": "Delete old LW Charts files (9 files) + fix imports",
       "priority": "high",
-      "passes": false,
+      "passes": true,
       "plan_task": 9,
-      "description": "Delete KLineChart.tsx, VolumeChart.tsx, Crosshair.tsx, InfoTooltip.tsx, useCrosshairSync.ts, useWheelZoom.ts, useChartSync.ts, darkTheme.ts, indicator.worker.ts. Fix remaining imports."
+      "description": "Delete KLineChart.tsx, VolumeChart.tsx, Crosshair.tsx, InfoTooltip.tsx, useCrosshairSync.ts, useWheelZoom.ts, useChartSync.ts, darkTheme.ts, indicator.worker.ts. Fix remaining imports.",
+      "completed_at": "2026-04-09"
     },
     {
       "id": "MIG-10",
@@ -100,25 +108,28 @@
       "id": "MIG-12",
       "title": "Delete IndicatorChart.tsx + move FormulaSeries type",
       "priority": "medium",
-      "passes": false,
+      "passes": true,
       "plan_task": 12,
-      "description": "Move FormulaSeries to src/types/chart.ts, delete IndicatorChart.tsx, wire IndicatorParamsDialog to KLineChart"
+      "description": "Move FormulaSeries to src/types/chart.ts, delete IndicatorChart.tsx, wire IndicatorParamsDialog to KLineChart",
+      "completed_at": "2026-04-09"
     },
     {
       "id": "MIG-13",
       "title": "Update DrawingContextMenu for KLineChart overlay API",
       "priority": "medium",
-      "passes": false,
+      "passes": true,
       "plan_task": 13,
-      "description": "Wire lock/unlock to chart.overrideOverlay() per plan Task 13"
+      "description": "Wire lock/unlock to chart.overrideOverlay() per plan Task 13",
+      "completed_at": "2026-04-09"
     },
     {
       "id": "MIG-14",
       "title": "Remove lightweight-charts dependency",
       "priority": "high",
-      "passes": false,
+      "passes": true,
       "plan_task": 14,
-      "description": "npm uninstall lightweight-charts, fix all remaining imports, verify typecheck passes"
+      "description": "npm uninstall lightweight-charts, fix all remaining imports, verify typecheck passes",
+      "completed_at": "2026-04-09"
     },
     {
       "id": "MIG-15",

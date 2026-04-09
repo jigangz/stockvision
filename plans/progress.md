@@ -597,20 +597,38 @@ See `docs/superpowers/plans/2026-04-09-klinechart-migration.md` (17 tasks, MIG-1
 - Data format: `{ timestamp (ms), open, high, low, close, volume?, turnover? }`
 
 ### Progress
-- [ ] MIG-1: Data adapter + theme
+- [x] MIG-1: Data adapter + theme
 - [ ] MIG-2: KLineChartWrapper
-- [ ] MIG-3: Overlay mapping + custom overlays
+- [ ] MIG-3: Overlay mapping + custom overlays (overlayMapping.ts created in MIG-10)
 - [ ] MIG-4: Custom indicators
 - [ ] MIG-5: ChartContainer rewrite
 - [ ] MIG-6: useKeyboardShortcuts adaptation
 - [ ] MIG-7: Register at entry
 - [ ] MIG-8: Simplify crosshairStore
 - [ ] MIG-9: Delete old files
-- [ ] MIG-10: DrawingBridge
-- [ ] MIG-11: BacktestResult migration
+- [x] MIG-10: DrawingBridge
+- [x] MIG-11: BacktestResult migration
 - [ ] MIG-12: IndicatorChart deletion
 - [ ] MIG-13: DrawingContextMenu update
 - [ ] MIG-14: Remove LW Charts dep
 - [ ] MIG-15: Version bump
 - [ ] MIG-16: DataLoader integration
 - [ ] MIG-GATE: Final verification
+
+## 2026-04-09 — MIG-1, MIG-10, MIG-11 (Iteration 1)
+
+### What was built
+- **`src/chart/dataAdapter.ts`**: `toKLineData(OhlcvData[]) → KLineData[]` + `toSingleKLineData`. Converts `time: "YYYY-MM-DD"` → `timestamp: ms`.
+- **`src/theme/klineTheme.ts`**: `darkStyles` object for `chart.setStyles()`. All colors match CSS variables. Candle up=#FF4444, down=#00CC66. MA line colors: yellow/purple/green/white.
+- **`src/chart/overlayMapping.ts`**: Maps `DrawingToolType` → KLineChart overlay name. Built-ins: straightLine, rayLine, fibonacciLine, etc. Custom: sv_arrow, sv_buyMark, sv_sellMark, sv_flatMark, etc.
+- **`src/components/chart/DrawingBridge.tsx`**: Sync bridge between drawingStore and KLineChart overlays. Two useEffects: (1) sync drawings array → chart overlays (add/remove); (2) when activeTool set, call `chart.createOverlay()` in drawing mode with `onDrawEnd` callback.
+- **`src/components/chart/DrawingCanvas.tsx` deleted** (1315 lines removed).
+- **`src/components/chart/ChartContainer.tsx`**: Replaced DrawingCanvas import/usage with DrawingBridge. Removed `drawingChart`/`drawingSeries` state + the useEffect that set them. Passes `chart={null}` to DrawingBridge (KLineChart instance comes in MIG-5).
+- **`src/components/chart/BacktestResult.tsx`**: Replaced D3 SVG equity curve with KLineChart instance. Uses `setSymbol/setPeriod/setDataLoader` API. Adds horizontal line overlay for flat benchmark. D3 import kept (still used by KLineWithMarkers candlestick chart).
+
+### Key patterns learned
+- KLineChart data feeding: `chart.setSymbol() + chart.setPeriod() + chart.setDataLoader({ getBars: ({ callback }) => callback(data, false) })` — the `false` arg means no more historical data.
+- DrawingBridge uses `prevDrawingIdsRef` to track which drawing IDs already have overlays, preventing duplicate creation.
+- `OverlayEventCallback` returns `void` (not boolean) — the plan's `onRightClick: () => false` was wrong.
+- `drawingStore.selectDrawing(id)` not `setSelectedId(id)`.
+- `drawingStore.activeStyle` not `defaultStyle`.

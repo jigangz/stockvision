@@ -9,7 +9,8 @@
       "id": "MIG-1",
       "title": "Data adapter (toKLineData) + KLineChart dark theme (klineTheme.ts)",
       "priority": "high",
-      "passes": false,
+      "passes": true,
+      "completed_at": "2026-04-09",
       "plan_task": 1,
       "description": "Create src/chart/dataAdapter.ts and src/theme/klineTheme.ts per plan Task 1"
     },
@@ -81,7 +82,8 @@
       "id": "MIG-10",
       "title": "DrawingCanvas -> DrawingBridge (overlay sync bridge)",
       "priority": "high",
-      "passes": false,
+      "passes": true,
+      "completed_at": "2026-04-09",
       "plan_task": 10,
       "description": "Create DrawingBridge.tsx to sync drawingStore with KLineChart overlays. Delete DrawingCanvas.tsx (1315 lines)."
     },
@@ -89,7 +91,8 @@
       "id": "MIG-11",
       "title": "BacktestResult equity curve migration to KLineChart",
       "priority": "medium",
-      "passes": false,
+      "passes": true,
+      "completed_at": "2026-04-09",
       "plan_task": 11,
       "description": "Replace D3 equity curve in BacktestResult.tsx with KLineChart instance per plan Task 11"
     },

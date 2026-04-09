@@ -104,30 +104,40 @@ export function useKeyboardShortcuts({
 
         chart.scrollToDataIndex(nextIndex);
         const klineData = chart.getDataList();
-        if (klineData[nextIndex]) {
-          chart.executeAction(ActionType.OnCrosshairChange, { dataIndex: nextIndex, kLineData: klineData[nextIndex] });
+        const bar = klineData[nextIndex];
+        if (bar) {
+          // Convert data point to pixel coordinates for precise crosshair positioning
+          const coord = chart.convertToPixel(
+            { timestamp: bar.timestamp, value: bar.close },
+            { paneId: 'candle_pane' },
+          );
+          chart.executeAction(ActionType.OnCrosshairChange, {
+            x: (coord as { x?: number }).x,
+            y: (coord as { y?: number }).y,
+            paneId: 'candle_pane',
+            dataIndex: nextIndex,
+            kLineData: bar,
+          });
         }
         useCrosshairStore.getState().setPosition({ activeBarIndex: nextIndex });
         e.preventDefault();
         return;
       }
 
-      if (e.key === 'ArrowUp') {
-        const { zoomLevel, setZoomLevel } = useChartStore.getState();
-        if (zoomLevel < 2) setZoomLevel((zoomLevel + 1) as 0 | 1 | 2);
+      // Up/Down: zoom in/out anchored at the right edge (通达信 style)
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'PageUp' || e.key === 'PageDown') {
         e.preventDefault();
+        if (!chart) return;
+        // Get chart width to anchor zoom at right edge
+        const chartEl = (chart as unknown as { getContainer?: () => HTMLElement }).getContainer?.();
+        const rightX = chartEl ? chartEl.clientWidth - 60 : 800; // 60px for Y-axis area
+        const scale = e.key === 'ArrowUp' ? 1.2
+          : e.key === 'ArrowDown' ? 0.8
+          : e.key === 'PageUp' ? 1.4
+          : 0.7;
+        chart.zoomAtCoordinate(scale, { x: rightX, y: 0 });
         return;
       }
-
-      if (e.key === 'ArrowDown') {
-        const { zoomLevel, setZoomLevel } = useChartStore.getState();
-        if (zoomLevel > 0) setZoomLevel((zoomLevel - 1) as 0 | 1 | 2);
-        e.preventDefault();
-        return;
-      }
-
-      if (e.key === 'PageUp') { e.preventDefault(); if (chart) chart.zoomAtCoordinate(1.4); return; }
-      if (e.key === 'PageDown') { e.preventDefault(); if (chart) chart.zoomAtCoordinate(0.7); return; }
       if (e.key === 'Home') { e.preventDefault(); if (chart) chart.scrollToDataIndex(0); return; }
       if (e.key === 'End') { e.preventDefault(); if (chart) chart.scrollToRealTime(); return; }
     };

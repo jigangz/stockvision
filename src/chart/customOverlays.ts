@@ -204,20 +204,348 @@ function createSimpleTwoPointOverlay(name: string): OverlayTemplate {
   };
 }
 
+// --- Gann Angle Lines (江恩角度线) ---
+// User places 2 points to define the 1×1 angle (base unit).
+// Draws 9 lines from p0 at standard Gann angle ratios.
+const GANN_RATIOS = [
+  { ratio: 1 / 8, label: '1×8' },
+  { ratio: 1 / 4, label: '1×4' },
+  { ratio: 1 / 3, label: '1×3' },
+  { ratio: 1 / 2, label: '1×2' },
+  { ratio: 1,     label: '1×1' },
+  { ratio: 2,     label: '2×1' },
+  { ratio: 3,     label: '3×1' },
+  { ratio: 4,     label: '4×1' },
+  { ratio: 8,     label: '8×1' },
+];
+
+const GANN_COLORS = [
+  '#FF6666', '#FF9933', '#FFCC00', '#66FF66', '#FFFFFF',
+  '#66FF66', '#FFCC00', '#FF9933', '#FF6666',
+];
+
+const gannAngleOverlay: OverlayTemplate = {
+  name: 'sv_gannAngle',
+  totalStep: 3,
+  needDefaultPointFigure: true,
+  createPointFigures: ({ coordinates, bounding }) => {
+    if (coordinates.length < 2) return [];
+    const [p0, p1] = coordinates;
+    const dx = p1.x - p0.x;
+    const dy = p1.y - p0.y;
+    if (Math.abs(dx) < 1) return [];
+
+    // 1×1 slope in pixels
+    const baseSlope = dy / dx;
+    const extendX = bounding.width * 2;
+    const figures: unknown[] = [];
+
+    for (let i = 0; i < GANN_RATIOS.length; i++) {
+      const { ratio, label } = GANN_RATIOS[i];
+      const slope = baseSlope * ratio;
+      const endX = p0.x + extendX;
+      const endY = p0.y + slope * extendX;
+      figures.push({
+        type: 'line',
+        attrs: { coordinates: [p0, { x: endX, y: endY }] },
+        styles: { color: GANN_COLORS[i], size: ratio === 1 ? 2 : 1 },
+      });
+      figures.push({
+        type: 'text',
+        attrs: {
+          x: p0.x + 200,
+          y: p0.y + slope * 200 - 10,
+          text: label,
+          align: 'left',
+          baseline: 'bottom',
+        },
+        styles: { color: GANN_COLORS[i], size: 10 },
+      });
+    }
+    return figures as ReturnType<NonNullable<OverlayTemplate['createPointFigures']>>;
+  },
+};
+
+// --- Gann Fan (江恩扇形) ---
+// Same as Gann Angle but also draws lines in the downward direction (mirror).
+const gannFanOverlay: OverlayTemplate = {
+  name: 'sv_gannFan',
+  totalStep: 3,
+  needDefaultPointFigure: true,
+  createPointFigures: ({ coordinates, bounding }) => {
+    if (coordinates.length < 2) return [];
+    const [p0, p1] = coordinates;
+    const dx = p1.x - p0.x;
+    const dy = p1.y - p0.y;
+    if (Math.abs(dx) < 1) return [];
+
+    const baseSlope = dy / dx;
+    const extendX = bounding.width * 2;
+    const figures: unknown[] = [];
+
+    // Upward fan (from p0 extending right)
+    for (let i = 0; i < GANN_RATIOS.length; i++) {
+      const { ratio, label } = GANN_RATIOS[i];
+      const slope = baseSlope * ratio;
+      figures.push({
+        type: 'line',
+        attrs: { coordinates: [p0, { x: p0.x + extendX, y: p0.y + slope * extendX }] },
+        styles: { color: GANN_COLORS[i], size: ratio === 1 ? 2 : 1 },
+      });
+      figures.push({
+        type: 'text',
+        attrs: {
+          x: p0.x + 160,
+          y: p0.y + slope * 160 - 8,
+          text: label,
+          align: 'left',
+          baseline: 'bottom',
+        },
+        styles: { color: GANN_COLORS[i], size: 9 },
+      });
+    }
+
+    // Downward mirror fan
+    for (let i = 0; i < GANN_RATIOS.length; i++) {
+      const { ratio } = GANN_RATIOS[i];
+      const slope = -baseSlope * ratio;
+      figures.push({
+        type: 'line',
+        attrs: { coordinates: [p0, { x: p0.x + extendX, y: p0.y + slope * extendX }] },
+        styles: { color: GANN_COLORS[i], size: 1, style: 'dashed', dashedValue: [4, 4] },
+      });
+    }
+    return figures as ReturnType<NonNullable<OverlayTemplate['createPointFigures']>>;
+  },
+};
+
+// --- Gann Grid (江恩网格) ---
+// Draws a grid of parallel Gann angle lines at the 1×1 ratio.
+const gannGridOverlay: OverlayTemplate = {
+  name: 'sv_gannGrid',
+  totalStep: 3,
+  needDefaultPointFigure: true,
+  createPointFigures: ({ coordinates, bounding }) => {
+    if (coordinates.length < 2) return [];
+    const [p0, p1] = coordinates;
+    const dx = p1.x - p0.x;
+    const dy = p1.y - p0.y;
+    if (Math.abs(dx) < 1) return [];
+
+    const baseSlope = dy / dx;
+    const spacing = Math.sqrt(dx * dx + dy * dy);
+    const extendX = bounding.width * 2;
+    const gridCount = 8;
+    const figures: unknown[] = [];
+
+    // Rising parallel lines
+    for (let i = -gridCount; i <= gridCount; i++) {
+      const offsetY = i * spacing * 0.5;
+      const startY = p0.y + offsetY;
+      figures.push({
+        type: 'line',
+        attrs: { coordinates: [{ x: p0.x, y: startY }, { x: p0.x + extendX, y: startY + baseSlope * extendX }] },
+        styles: { color: i === 0 ? '#FFFFFF' : '#555555', size: i === 0 ? 2 : 1 },
+      });
+    }
+
+    // Falling parallel lines (perpendicular angle)
+    const perpSlope = -1 / baseSlope;
+    for (let i = -gridCount; i <= gridCount; i++) {
+      const offsetX = i * spacing * 0.5;
+      const startX = p0.x + offsetX;
+      figures.push({
+        type: 'line',
+        attrs: { coordinates: [{ x: startX, y: p0.y }, { x: startX + extendX, y: p0.y + perpSlope * extendX }] },
+        styles: { color: i === 0 ? '#FFFFFF' : '#555555', size: i === 0 ? 2 : 1 },
+      });
+    }
+    return figures as ReturnType<NonNullable<OverlayTemplate['createPointFigures']>>;
+  },
+};
+
+// --- Gann Square (江恩正方) ---
+// Draws a box based on 2 points with diagonal lines.
+const gannSquareOverlay: OverlayTemplate = {
+  name: 'sv_gannSquare',
+  totalStep: 3,
+  needDefaultPointFigure: true,
+  createPointFigures: ({ coordinates }) => {
+    if (coordinates.length < 2) return [];
+    const [p0, p1] = coordinates;
+    const figures: unknown[] = [];
+
+    // Rectangle
+    figures.push({
+      type: 'rect',
+      attrs: { x: Math.min(p0.x, p1.x), y: Math.min(p0.y, p1.y), width: Math.abs(p1.x - p0.x), height: Math.abs(p1.y - p0.y) },
+      styles: { color: 'rgba(255,255,255,0.05)', borderColor: '#AAAAAA', borderSize: 1 },
+    });
+
+    // Diagonal lines
+    figures.push(
+      { type: 'line', attrs: { coordinates: [p0, p1] }, styles: { color: '#FFFF00' } },
+      { type: 'line', attrs: { coordinates: [{ x: p0.x, y: p1.y }, { x: p1.x, y: p0.y }] }, styles: { color: '#FFFF00' } },
+    );
+
+    // Cross lines
+    const cx = (p0.x + p1.x) / 2;
+    const cy = (p0.y + p1.y) / 2;
+    figures.push(
+      { type: 'line', attrs: { coordinates: [{ x: cx, y: p0.y }, { x: cx, y: p1.y }] }, styles: { color: '#888888', style: 'dashed', dashedValue: [4, 4] } },
+      { type: 'line', attrs: { coordinates: [{ x: p0.x, y: cy }, { x: p1.x, y: cy }] }, styles: { color: '#888888', style: 'dashed', dashedValue: [4, 4] } },
+    );
+    return figures as ReturnType<NonNullable<OverlayTemplate['createPointFigures']>>;
+  },
+};
+
+// --- Speed Resistance Lines (速度阻力线) ---
+const speedResistanceOverlay: OverlayTemplate = {
+  name: 'sv_speedResistance',
+  totalStep: 3,
+  needDefaultPointFigure: true,
+  createPointFigures: ({ coordinates, bounding }) => {
+    if (coordinates.length < 2) return [];
+    const [p0, p1] = coordinates;
+    const dx = p1.x - p0.x;
+    const dy = p1.y - p0.y;
+    const extendX = bounding.width * 2;
+    const figures: unknown[] = [];
+    const thirds = [1 / 3, 2 / 3, 1];
+    const colors = ['#FF6666', '#66FF66', '#FFFFFF'];
+
+    for (let i = 0; i < thirds.length; i++) {
+      const slope = (dy * thirds[i]) / dx;
+      figures.push({
+        type: 'line',
+        attrs: { coordinates: [p0, { x: p0.x + extendX, y: p0.y + slope * extendX }] },
+        styles: { color: colors[i], size: 1 },
+      });
+    }
+    return figures as ReturnType<NonNullable<OverlayTemplate['createPointFigures']>>;
+  },
+};
+
+// --- Percent Lines (百分比线) ---
+const percentLineOverlay: OverlayTemplate = {
+  name: 'sv_percentLine',
+  totalStep: 3,
+  needDefaultPointFigure: true,
+  createPointFigures: ({ coordinates }) => {
+    if (coordinates.length < 2) return [];
+    const [p0, p1] = coordinates;
+    const levels = [0, 0.25, 0.333, 0.5, 0.667, 0.75, 1.0];
+    const width = Math.abs(p1.x - p0.x) + 100;
+    const left = Math.min(p0.x, p1.x);
+    const figures: unknown[] = [];
+    for (const lvl of levels) {
+      const y = p0.y + (p1.y - p0.y) * lvl;
+      figures.push(
+        { type: 'line', attrs: { coordinates: [{ x: left, y }, { x: left + width, y }] } },
+        { type: 'text', attrs: { x: left + width + 4, y, text: `${(lvl * 100).toFixed(1)}%`, align: 'left', baseline: 'middle' }, styles: { color: '#CCCCCC', size: 10 } },
+      );
+    }
+    return figures as ReturnType<NonNullable<OverlayTemplate['createPointFigures']>>;
+  },
+};
+
+// --- Cycle Lines (周期线) ---
+const cycleLineOverlay: OverlayTemplate = {
+  name: 'sv_cycleLine',
+  totalStep: 3,
+  needDefaultPointFigure: true,
+  createPointFigures: ({ coordinates, bounding }) => {
+    if (coordinates.length < 2) return [];
+    const [p0, p1] = coordinates;
+    const interval = Math.abs(p1.x - p0.x);
+    if (interval < 2) return [];
+    const count = Math.ceil(bounding.width / interval) + 1;
+    const figures: unknown[] = [];
+    for (let i = 0; i <= count; i++) {
+      const x = p0.x + interval * i;
+      figures.push({
+        type: 'line',
+        attrs: { coordinates: [{ x, y: 0 }, { x, y: bounding.height }] },
+        styles: { color: i === 0 ? '#FFFFFF' : '#555555', size: 1, style: i === 0 ? 'solid' : 'dashed', dashedValue: [4, 4] },
+      });
+    }
+    return figures as ReturnType<NonNullable<OverlayTemplate['createPointFigures']>>;
+  },
+};
+
+// --- Pitchfork (安德鲁音叉) ---
+const pitchforkOverlay: OverlayTemplate = {
+  name: 'sv_pitchfork',
+  totalStep: 4,
+  needDefaultPointFigure: true,
+  createPointFigures: ({ coordinates, bounding }) => {
+    if (coordinates.length < 3) return [];
+    const [p0, p1, p2] = coordinates;
+    // Median point between p1 and p2
+    const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+    const dx = mid.x - p0.x;
+    const dy = mid.y - p0.y;
+    if (Math.abs(dx) < 1) return [];
+    const slope = dy / dx;
+    const extendX = bounding.width * 2;
+
+    // Median line from p0 through mid
+    const medEnd = { x: p0.x + extendX, y: p0.y + slope * extendX };
+    // Upper parallel through p1
+    const upperEnd = { x: p1.x + extendX, y: p1.y + slope * extendX };
+    // Lower parallel through p2
+    const lowerEnd = { x: p2.x + extendX, y: p2.y + slope * extendX };
+
+    return [
+      { type: 'line', attrs: { coordinates: [p0, medEnd] }, styles: { color: '#FFFFFF', size: 2 } },
+      { type: 'line', attrs: { coordinates: [p1, upperEnd] }, styles: { color: '#66FF66' } },
+      { type: 'line', attrs: { coordinates: [p2, lowerEnd] }, styles: { color: '#FF6666' } },
+      { type: 'line', attrs: { coordinates: [p1, p2] }, styles: { color: '#888888', style: 'dashed', dashedValue: [4, 4] } },
+    ] as ReturnType<NonNullable<OverlayTemplate['createPointFigures']>>;
+  },
+};
+
+// --- Fibonacci Fan (斐波那契扇形) ---
+const fibFanOverlay: OverlayTemplate = {
+  name: 'sv_fibFan',
+  totalStep: 3,
+  needDefaultPointFigure: true,
+  createPointFigures: ({ coordinates, bounding }) => {
+    if (coordinates.length < 2) return [];
+    const [p0, p1] = coordinates;
+    const dx = p1.x - p0.x;
+    const dy = p1.y - p0.y;
+    const extendX = bounding.width * 2;
+    const levels = [0.236, 0.382, 0.5, 0.618, 0.786];
+    const figures: unknown[] = [];
+
+    // Base line
+    figures.push({ type: 'line', attrs: { coordinates: [p0, { x: p0.x + extendX, y: p0.y + (dy / dx) * extendX }] }, styles: { color: '#FFFFFF' } });
+
+    for (const lvl of levels) {
+      const targetY = p0.y + dy * lvl;
+      const slope = (targetY - p0.y) / dx;
+      figures.push({
+        type: 'line',
+        attrs: { coordinates: [p0, { x: p0.x + extendX, y: p0.y + slope * extendX }] },
+        styles: { color: '#888888', style: 'dashed', dashedValue: [4, 4] },
+      });
+      figures.push({
+        type: 'text',
+        attrs: { x: p1.x, y: p0.y + slope * dx - 8, text: `${(lvl * 100).toFixed(1)}%`, align: 'left', baseline: 'bottom' },
+        styles: { color: '#AAAAAA', size: 9 },
+      });
+    }
+    return figures as ReturnType<NonNullable<OverlayTemplate['createPointFigures']>>;
+  },
+};
+
+// --- Remaining simple overlays ---
 const additionalOverlays: OverlayTemplate[] = [
   createSimpleTwoPointOverlay('sv_arc'),
-  createSimpleTwoPointOverlay('sv_pitchfork'),
   createSimpleTwoPointOverlay('sv_regressionChannel'),
-  createSimpleTwoPointOverlay('sv_fibFan'),
   createSimpleTwoPointOverlay('sv_fibArc'),
   createSimpleTwoPointOverlay('sv_fibTimezone'),
-  createSimpleTwoPointOverlay('sv_gannAngle'),
-  createSimpleTwoPointOverlay('sv_gannFan'),
-  createSimpleTwoPointOverlay('sv_gannGrid'),
-  createSimpleTwoPointOverlay('sv_gannSquare'),
-  createSimpleTwoPointOverlay('sv_speedResistance'),
-  createSimpleTwoPointOverlay('sv_percentLine'),
-  createSimpleTwoPointOverlay('sv_cycleLine'),
 ];
 
 /**
@@ -233,6 +561,15 @@ export function registerCustomOverlays(): void {
     ellipseOverlay,
     fibExtensionOverlay,
     measureOverlay,
+    gannAngleOverlay,
+    gannFanOverlay,
+    gannGridOverlay,
+    gannSquareOverlay,
+    speedResistanceOverlay,
+    percentLineOverlay,
+    cycleLineOverlay,
+    pitchforkOverlay,
+    fibFanOverlay,
     ...additionalOverlays,
   ];
 

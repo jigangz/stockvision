@@ -5,6 +5,7 @@ import {
   useIndicatorStore,
   type IndicatorType,
 } from '@/stores/indicatorStore';
+import { useChartStore } from '@/stores/chartStore';
 
 interface Props {
   indicator: IndicatorType;
@@ -88,18 +89,25 @@ const btnPrimary: React.CSSProperties = {
   borderColor: '#CC3333',
 };
 
+const PERIOD_LABELS: Record<string, string> = {
+  daily: '日线', weekly: '周线', monthly: '月线', quarterly: '季线', yearly: '年线',
+  min1: '1分', min5: '5分', min15: '15分', min30: '30分', min60: '60分',
+};
+
 export function IndicatorParamsDialog({ indicator, onClose }: Props) {
   const defaults = INDICATOR_DEFAULTS[indicator];
   const storedParams = useIndicatorStore((s) => s.indicatorParams[indicator]);
   const setParams = useIndicatorStore((s) => s.setParams);
   const resetParams = useIndicatorStore((s) => s.resetParams);
+  const currentPeriod = useChartStore((s) => s.currentPeriod);
+  const periodLabel = PERIOD_LABELS[currentPeriod] ?? currentPeriod;
 
   // No tuneable params for this indicator
   if (!defaults || Object.keys(defaults).length === 0) {
     return (
       <div style={overlay} onClick={onClose}>
         <div style={dialog} onClick={(e) => e.stopPropagation()}>
-          <div style={titleStyle}>{indicator} 参数设置</div>
+          <div style={titleStyle}>[{indicator}] 指标参数调整 ({periodLabel})</div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>
             该指标没有可调参数
           </div>
@@ -116,7 +124,7 @@ export function IndicatorParamsDialog({ indicator, onClose }: Props) {
     initial[key] = String(storedParams?.[key] ?? defaults[key]);
   }
 
-  return <IndicatorParamsForm indicator={indicator} defaults={defaults} initial={initial} setParams={setParams} resetParams={resetParams} onClose={onClose} />;
+  return <IndicatorParamsForm indicator={indicator} defaults={defaults} initial={initial} setParams={setParams} resetParams={resetParams} onClose={onClose} periodLabel={periodLabel} />;
 }
 
 // Separate component so useState doesn't re-init on store changes
@@ -127,6 +135,7 @@ function IndicatorParamsForm({
   setParams,
   resetParams,
   onClose,
+  periodLabel,
 }: {
   indicator: string;
   defaults: Record<string, number>;
@@ -134,6 +143,7 @@ function IndicatorParamsForm({
   setParams: (ind: string, p: Record<string, number>) => void;
   resetParams: (ind: string) => void;
   onClose: () => void;
+  periodLabel: string;
 }) {
   const [values, setValues] = useState<Record<string, string>>(initial);
 
@@ -159,7 +169,7 @@ function IndicatorParamsForm({
   return (
     <div style={overlay} onClick={onClose}>
       <div style={dialog} onClick={(e) => e.stopPropagation()}>
-        <div style={titleStyle}>{indicator} 参数设置</div>
+        <div style={titleStyle}>[{indicator}] 指标参数调整 ({periodLabel})</div>
 
         {Object.keys(defaults).map((key) => (
           <div key={key} style={row}>
@@ -175,9 +185,9 @@ function IndicatorParamsForm({
         ))}
 
         <div style={btnRow}>
-          <button style={btn} onClick={handleReset}>重置</button>
-          <button style={btn} onClick={onClose}>取消</button>
-          <button style={btnPrimary} onClick={handleConfirm}>确定</button>
+          <button style={btn} onClick={handleConfirm} title="应用到所有周期">应用所有周期</button>
+          <button style={btn} onClick={handleReset}>恢复成缺省</button>
+          <button style={btnPrimary} onClick={onClose}>关闭</button>
         </div>
       </div>
     </div>

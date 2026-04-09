@@ -25,6 +25,8 @@ export function IndicatorTabBar(): React.ReactElement {
     setActiveIndicator(ind);
   };
 
+  const setActiveSection = useIndicatorStore((s) => s.setActiveSection);
+
   return (
     <>
       <div
@@ -40,6 +42,27 @@ export function IndicatorTabBar(): React.ReactElement {
           scrollbarWidth: 'none',
         }}
       >
+        {/* Section selector */}
+        <button
+          onClick={() => setActiveSection(activeSection === 'upper' ? 'lower' : 'upper')}
+          style={{
+            flexShrink: 0,
+            background: 'transparent',
+            border: '1px solid var(--border)',
+            borderRadius: 2,
+            color: activeSection === 'upper' ? '#FFFF00' : '#00CCFF',
+            fontSize: 10,
+            padding: '0 6px',
+            height: 16,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            marginRight: 6,
+            marginLeft: 4,
+          }}
+          title={`当前编辑: ${activeSection === 'upper' ? '中间面板' : '下方面板'} (点击切换)`}
+        >
+          {activeSection === 'upper' ? '▲中' : '▼下'}
+        </button>
         {ALL_INDICATORS.map((ind: IndicatorType) => (
           <button
             key={ind}

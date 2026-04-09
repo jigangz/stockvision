@@ -13,6 +13,8 @@ export interface KLineChartWrapperHandle {
   chart: Chart | null;
   upperPaneId: string | null;
   lowerPaneId: string | null;
+  /** The paneId the crosshair is currently hovering over */
+  lastCrosshairPaneId: string | null;
 }
 
 export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
@@ -21,6 +23,7 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
     const chartRef = useRef<Chart | null>(null);
     const upperPaneIdRef = useRef<string | null>(null);
     const lowerPaneIdRef = useRef<string | null>(null);
+    const lastCrosshairPaneIdRef = useRef<string | null>(null);
 
     const candles = useDataStore((s) => s.candles);
     const zoomLevel = useChartStore((s) => s.zoomLevel);
@@ -37,6 +40,7 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       get chart() { return chartRef.current; },
       get upperPaneId() { return upperPaneIdRef.current; },
       get lowerPaneId() { return lowerPaneIdRef.current; },
+      get lastCrosshairPaneId() { return lastCrosshairPaneIdRef.current; },
     }));
 
     // Initialize chart once
@@ -68,9 +72,12 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       });
       lowerPaneIdRef.current = lowerPaneId;
 
-      // Subscribe crosshair changes → crosshairStore
+      // Subscribe crosshair changes → crosshairStore + track paneId
       chart.subscribeAction(ActionType.OnCrosshairChange, (data) => {
-        const ch = data as { dataIndex?: number };
+        const ch = data as { dataIndex?: number; paneId?: string };
+        if (ch?.paneId) {
+          lastCrosshairPaneIdRef.current = ch.paneId;
+        }
         if (ch?.dataIndex != null) {
           useCrosshairStore.getState().setPosition({ activeBarIndex: ch.dataIndex });
         }

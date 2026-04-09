@@ -20,6 +20,8 @@ import { useChartStore } from '@/stores/chartStore';
 import { useChartSettingsStore, getDefaultRightOffset } from '@/stores/chartSettingsStore';
 import { useDrawingStore } from '@/stores/drawingStore';
 import { useWatchlistStore } from '@/stores/watchlistStore';
+import { useIndicatorStore, type IndicatorType } from '@/stores/indicatorStore';
+import { IndicatorParamsDialog } from '@/components/chart/IndicatorParamsDialog';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 export function ChartContainer(): React.ReactElement {
@@ -49,6 +51,10 @@ export function ChartContainer(): React.ReactElement {
   const [formulaOverlay, setFormulaOverlay] = useState<FormulaSeries[]>([]);
   const [showDrawingToolbar, setShowDrawingToolbar] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+  const [indicatorParamsTarget, setIndicatorParamsTarget] = useState<IndicatorType | null>(null);
+  const setActiveSection = useIndicatorStore((s) => s.setActiveSection);
+  const activeIndicatorUpper = useIndicatorStore((s) => s.activeIndicatorUpper);
+  const activeIndicatorLower = useIndicatorStore((s) => s.activeIndicatorLower);
 
   const chartWrapperRef = useRef<KLineChartWrapperHandle>(null);
 
@@ -108,6 +114,35 @@ export function ChartContainer(): React.ReactElement {
     onEnterCode: () => setShowCodeInput(true),
   });
 
+  /** Determine which section was clicked/right-clicked based on crosshair paneId */
+  const getClickedSection = useCallback(() => {
+    const wrapper = chartWrapperRef.current;
+    if (!wrapper) return null;
+    const paneId = wrapper.lastCrosshairPaneId;
+    if (paneId === wrapper.upperPaneId) return 'upper' as const;
+    if (paneId === wrapper.lowerPaneId) return 'lower' as const;
+    return null;
+  }, []);
+
+  const handleChartClick = useCallback(() => {
+    const section = getClickedSection();
+    if (section) setActiveSection(section);
+  }, [getClickedSection, setActiveSection]);
+
+  const handleChartContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const section = getClickedSection();
+    if (section) {
+      // Right-click on indicator pane → open param dialog
+      setActiveSection(section);
+      const indicator = section === 'upper' ? activeIndicatorUpper : activeIndicatorLower;
+      setIndicatorParamsTarget(indicator);
+    } else {
+      // Right-click on main chart → drawing context menu
+      setCtxMenu({ x: e.clientX, y: e.clientY });
+    }
+  }, [getClickedSection, setActiveSection, activeIndicatorUpper, activeIndicatorLower]);
+
   const inWatchlist = watchlistCodes.includes(currentCode);
 
   const toolbarBtnStyle: React.CSSProperties = {
@@ -164,10 +199,8 @@ export function ChartContainer(): React.ReactElement {
 
       <div
         style={{ flex: 1, minHeight: 0, position: 'relative' }}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          setCtxMenu({ x: e.clientX, y: e.clientY });
-        }}
+        onClick={handleChartClick}
+        onContextMenu={handleChartContextMenu}
       >
         <KLineChartWrapper ref={chartWrapperRef} />
         <DrawingBridge chart={chartWrapperRef.current?.chart ?? null} />
@@ -204,6 +237,12 @@ export function ChartContainer(): React.ReactElement {
         />
       )}
       {formulaOverlay.length > 0 && null}
+      {indicatorParamsTarget && (
+        <IndicatorParamsDialog
+          indicator={indicatorParamsTarget}
+          onClose={() => setIndicatorParamsTarget(null)}
+        />
+      )}
     </div>
   );
 }

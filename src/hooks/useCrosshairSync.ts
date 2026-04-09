@@ -44,7 +44,7 @@ export function useCrosshairSync(entries: ChartEntry[]) {
       setPosition({
         snapX,
         mouseY: param.point.y,
-        timeLabel: formatTime(param.time as number),
+        timeLabel: formatTime(param.time as number | string),
         activeChart: source.key,
         activeBarIndex: barIndex >= 0 ? barIndex : null,
         priceAtY,
@@ -98,8 +98,27 @@ export function useCrosshairSync(entries: ChartEntry[]) {
   return { handleMouseLeave };
 }
 
-function formatTime(timestamp: number): string {
-  const d = new Date(timestamp * 1000);
+function formatTime(time: number | string): string {
+  if (time == null) return '--';
+  // lightweight-charts may pass time as "YYYY-MM-DD" string or unix timestamp number
+  if (typeof time === 'string') {
+    const parts = time.split('-');
+    if (parts.length === 3) {
+      const y = Number(parts[0]);
+      const m = Number(parts[1]);
+      const day = Number(parts[2]);
+      if (isNaN(y) || isNaN(m) || isNaN(day)) return String(time);
+      const d = new Date(Date.UTC(y, m - 1, day));
+      const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+      const w = weekdays[d.getUTCDay()];
+      return `${y}/${String(m).padStart(2, '0')}/${String(day).padStart(2, '0')}/星期${w}`;
+    }
+    return String(time);
+  }
+  // Unix timestamp (seconds)
+  if (isNaN(time)) return '--';
+  const d = new Date(time * 1000);
+  if (isNaN(d.getTime())) return '--';
   const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');

@@ -8,17 +8,6 @@ import { useChartStore } from '@/stores/chartStore';
 import { useCrosshairStore } from '@/stores/crosshairStore';
 import { useDrawingStore } from '@/stores/drawingStore';
 
-// Stock list used for up/down navigation
-const STOCK_LIST: { code: string; market: 'SH' | 'SZ' }[] = [
-  { code: '000001', market: 'SH' },
-  { code: '600000', market: 'SH' },
-  { code: '600036', market: 'SH' },
-  { code: '601318', market: 'SH' },
-  { code: '000858', market: 'SZ' },
-  { code: '002594', market: 'SZ' },
-  { code: '300750', market: 'SZ' },
-  { code: '000333', market: 'SZ' },
-];
 
 interface Options {
   klineRef: React.RefObject<KLineChartHandle | null>;
@@ -242,17 +231,17 @@ export function useKeyboardShortcuts({
         return;
       }
 
-      // --- Arrow Up/Down: switch stock ---
-      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-        const { currentCode, setCode, setMarket } = useChartStore.getState();
-        const idx = STOCK_LIST.findIndex((s) => s.code === currentCode);
-        let nextIdx = idx;
-        if (e.key === 'ArrowUp') nextIdx = Math.max(0, idx - 1);
-        if (e.key === 'ArrowDown') nextIdx = Math.min(STOCK_LIST.length - 1, idx + 1);
-        if (nextIdx !== idx) {
-          setCode(STOCK_LIST[nextIdx].code);
-          setMarket(STOCK_LIST[nextIdx].market);
-        }
+      // --- Arrow Up: zoom in (hide panels progressively) ---
+      if (e.key === 'ArrowUp') {
+        const { zoomLevel, setZoomLevel } = useChartStore.getState();
+        if (zoomLevel < 2) setZoomLevel((zoomLevel + 1) as 0 | 1 | 2);
+        e.preventDefault();
+        return;
+      }
+      // --- Arrow Down: zoom out (restore panels progressively) ---
+      if (e.key === 'ArrowDown') {
+        const { zoomLevel, setZoomLevel } = useChartStore.getState();
+        if (zoomLevel > 0) setZoomLevel((zoomLevel - 1) as 0 | 1 | 2);
         e.preventDefault();
         return;
       }

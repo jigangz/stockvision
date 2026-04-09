@@ -949,6 +949,99 @@ function renderDrawing(
   }
 }
 
+/** Draw small square handles at each drawing point (edit mode) */
+function renderEditHandles(
+  ctx: CanvasRenderingContext2D,
+  drawing: Drawing,
+  chart: IChartApi,
+  series: ISeriesApi<SeriesType>,
+) {
+  const size = 4;
+  ctx.fillStyle = '#FFFF00';
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([]);
+  for (const p of drawing.points) {
+    const px = toPixel(p, chart, series);
+    if (!px) continue;
+    ctx.fillRect(px.x - size, px.y - size, size * 2, size * 2);
+    ctx.strokeRect(px.x - size, px.y - size, size * 2, size * 2);
+  }
+}
+
+/** Draw a small lock icon near the first point of a locked drawing */
+function renderLockIcon(
+  ctx: CanvasRenderingContext2D,
+  drawing: Drawing,
+  chart: IChartApi,
+  series: ISeriesApi<SeriesType>,
+) {
+  const p0 = drawing.points[0];
+  if (!p0) return;
+  const px = toPixel(p0, chart, series);
+  if (!px) return;
+
+  const x = px.x + 8;
+  const y = px.y - 14;
+  const w = 10;
+  const h = 8;
+
+  ctx.save();
+  ctx.strokeStyle = '#aaa';
+  ctx.fillStyle = '#555';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([]);
+
+  // Lock body
+  ctx.fillRect(x - w / 2, y, w, h);
+  ctx.strokeRect(x - w / 2, y, w, h);
+
+  // Lock shackle
+  ctx.beginPath();
+  ctx.arc(x, y, 4, Math.PI, 0);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+/** Render dashed bounding highlight for locked drawings */
+function renderLockedOverlay(
+  ctx: CanvasRenderingContext2D,
+  drawing: Drawing,
+  chart: IChartApi,
+  series: ISeriesApi<SeriesType>,
+) {
+  const pixelPts = drawing.points
+    .map((p) => toPixel(p, chart, series))
+    .filter((p): p is { x: number; y: number } => p !== null);
+  if (pixelPts.length === 0) return;
+
+  ctx.save();
+  ctx.strokeStyle = '#888';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 3]);
+  ctx.globalAlpha = 0.6;
+
+  if (pixelPts.length === 1) {
+    // Single-point drawing: small dashed circle
+    ctx.beginPath();
+    ctx.arc(pixelPts[0].x, pixelPts[0].y, 8, 0, Math.PI * 2);
+    ctx.stroke();
+  } else {
+    // Multi-point: dashed polyline around points
+    ctx.beginPath();
+    ctx.moveTo(pixelPts[0].x, pixelPts[0].y);
+    for (let i = 1; i < pixelPts.length; i++) {
+      ctx.lineTo(pixelPts[i].x, pixelPts[i].y);
+    }
+    ctx.stroke();
+  }
+
+  ctx.restore();
+
+  renderLockIcon(ctx, drawing, chart, series);
+}
+
 export function DrawingCanvas({ chart, series }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -992,6 +1085,16 @@ export function DrawingCanvas({ chart, series }: Props) {
 
     for (const drawing of currentDrawings) {
       renderDrawing(ctx, drawing, c, s, cssW, cssH);
+
+      // Locked drawing overlay: dashed outline + lock icon
+      if (drawing.locked) {
+        renderLockedOverlay(ctx, drawing, c, s);
+      }
+
+      // Editing drawing: show endpoint handles
+      if (drawing.editing) {
+        renderEditHandles(ctx, drawing, c, s);
+      }
     }
 
     // Preview while placing points

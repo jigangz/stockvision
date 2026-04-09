@@ -1,3 +1,5 @@
+import { useHealthMonitor } from '@/hooks/useHealthMonitor';
+
 const barStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
@@ -21,13 +23,16 @@ const dotStyle = (connected: boolean): React.CSSProperties => ({
 });
 
 export function StatusBar() {
+  const { status } = useHealthMonitor();
+  const connected = status?.healthy ?? false;
+
   return (
     <div style={barStyle}>
       <div style={{ display: 'flex', alignItems: 'center' }}>
-        <span style={dotStyle(false)} />
-        <span>MockAdapter</span>
+        <span style={dotStyle(connected)} />
+        <span>{connected ? 'AKShare' : '未连接'}</span>
       </div>
-      <span>StockVision v0.1.0</span>
+      <span>StockVision v{__APP_VERSION__}</span>
     </div>
   );
 }

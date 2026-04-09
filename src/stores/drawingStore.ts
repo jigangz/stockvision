@@ -53,6 +53,8 @@ export interface Drawing {
   points: DrawingPoint[];
   style: DrawingStyle;
   text?: string;
+  locked?: boolean;
+  editing?: boolean;
 }
 
 const DEFAULT_STYLE: DrawingStyle = {
@@ -89,6 +91,8 @@ interface DrawingActions {
   removeDrawing: (id: string) => void;
   clearAll: () => void;
   selectDrawing: (id: string | null) => void;
+  toggleLock: (id: string) => void;
+  setEditing: (id: string | null) => void;
   setDrawings: (drawings: Drawing[]) => void;
   setContext: (code: string, period: string) => void;
   loadDrawings: (code: string, period: string) => Promise<void>;
@@ -157,6 +161,20 @@ export const useDrawingStore = create<DrawingState & DrawingActions>((set, get) 
   },
 
   selectDrawing: (id) => set({ selectedId: id }),
+
+  toggleLock: (id) =>
+    set((s) => ({
+      drawings: s.drawings.map((d) =>
+        d.id === id ? { ...d, locked: !d.locked } : d,
+      ),
+    })),
+
+  setEditing: (id) =>
+    set((s) => ({
+      drawings: s.drawings.map((d) =>
+        d.id === id ? { ...d, editing: true } : d.editing ? { ...d, editing: false } : d,
+      ),
+    })),
 
   setDrawings: (drawings) => set({ drawings }),
 

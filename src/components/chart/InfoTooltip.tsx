@@ -103,14 +103,21 @@ const Row: React.FC<{ label: string; value: string; className: string }> = ({
 );
 
 function formatTime(timeStr: string): string {
+  if (!timeStr) return '--';
   // timeStr is "YYYY-MM-DD" format from OhlcvData
-  const d = new Date(timeStr);
-  const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  const w = weekdays[d.getDay()];
-  return `${y}/${m}/${day}/星期${w}`;
+  const parts = timeStr.split('-');
+  if (parts.length === 3) {
+    const y = Number(parts[0]);
+    const m = Number(parts[1]);
+    const day = Number(parts[2]);
+    if (isNaN(y) || isNaN(m) || isNaN(day)) return timeStr;
+    // Construct date using UTC to avoid timezone shifts
+    const d = new Date(Date.UTC(y, m - 1, day));
+    const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+    const w = weekdays[d.getUTCDay()];
+    return `${y}/${String(m).padStart(2, '0')}/${String(day).padStart(2, '0')}/星期${w}`;
+  }
+  return timeStr;
 }
 
 function formatVolume(vol: number): string {

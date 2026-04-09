@@ -546,3 +546,21 @@ created: 2026-04-07
 - Auto-scroll margin = 5 bars: `nextIndex < range.from + margin` → scroll left; `nextIndex > range.to - margin` → scroll right
 - LW Charts `setCrosshairPosition` automatically highlights the time axis date and triggers crosshair sync hook
 - `clearCrosshairPosition()` is the LW Charts API to programmatically remove crosshair
+
+## 2026-04-08 — P10-GATE: Phase 10 Gate
+
+### What was fixed
+- **`src/hooks/useKeyboardShortcuts.ts`**: Added `volumeRef` and `indicatorRef` to `Options` interface and destructuring. Added crosshair sync to volume/indicator charts during keyboard navigation. Removed non-existent `setKeyboardNavMode` call.
+- **`src/hooks/useCrosshairSync.ts`**: Removed non-existent `isKeyboardNavMode` field from `setPosition` call.
+
+### Verification
+- TypeScript: 0 errors
+- Python tests: 265/265 passed
+
+### Gate criteria met
+- Keyboard wizard works from both chart and market views (KeyboardWizard in MainLayout) ✓
+- K-line arrow navigation shows correct OHLCV data per bar (setCrosshairPosition on kline + volume + indicator charts) ✓
+- Time axis date highlight visible on navigation (LW Charts setCrosshairPosition auto-highlights time axis) ✓
+- All views integrate: sidebar + chart/market + info panel ✓
+- No regressions in existing drawing/indicator/backtest features (265/265 tests pass) ✓
+- TypeScript 0 errors, all Python tests pass ✓

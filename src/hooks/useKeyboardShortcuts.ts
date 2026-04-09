@@ -22,6 +22,8 @@ const STOCK_LIST: { code: string; market: 'SH' | 'SZ' }[] = [
 
 interface Options {
   klineRef: React.RefObject<KLineChartHandle | null>;
+  volumeRef: React.RefObject<VolumeChartHandle | null>;
+  indicatorRef: React.RefObject<IndicatorChartHandle | null>;
   charts: (IChartApi | null)[];
   /** Called when F5 is pressed */
   onRefresh: () => void;
@@ -37,6 +39,8 @@ interface Options {
 
 export function useKeyboardShortcuts({
   klineRef,
+  volumeRef,
+  indicatorRef,
   charts,
   onRefresh,
   onStockInfo,
@@ -47,6 +51,8 @@ export function useKeyboardShortcuts({
   // Keep refs so the handler always reads latest values without re-attaching
   const optsRef = useRef({
     klineRef,
+    volumeRef,
+    indicatorRef,
     charts,
     onRefresh,
     onStockInfo,
@@ -55,7 +61,7 @@ export function useKeyboardShortcuts({
     onEnterCode,
   });
   useEffect(() => {
-    optsRef.current = { klineRef, charts, onRefresh, onStockInfo, anyDialogOpen, onCloseDialog, onEnterCode };
+    optsRef.current = { klineRef, volumeRef, indicatorRef, charts, onRefresh, onStockInfo, anyDialogOpen, onCloseDialog, onEnterCode };
   });
 
   // Track keyboard navigation mode: mouse move/click exits it
@@ -85,7 +91,7 @@ export function useKeyboardShortcuts({
       const target = e.target as HTMLElement;
       const inInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
 
-      const { klineRef: kRef, charts: cs, onRefresh: refresh, onStockInfo: stockInfo, anyDialogOpen: dialogOpen, onCloseDialog: closeDialog, onEnterCode: enterCode } = optsRef.current;
+      const { klineRef: kRef, volumeRef: vRef, indicatorRef: iRef, charts: cs, onRefresh: refresh, onStockInfo: stockInfo, anyDialogOpen: dialogOpen, onCloseDialog: closeDialog, onEnterCode: enterCode } = optsRef.current;
 
       const kChart = kRef.current?.chart;
 
@@ -185,51 +191,46 @@ export function useKeyboardShortcuts({
 
         if (kChart) {
           const kSeries = kRef.current?.candleSeries;
+          const bar = currentCandles[nextIndex];
+          const barTime = bar.time as Parameters<typeof kChart.setCrosshairPosition>[1];
+
+          // Set crosshair on kline chart
           if (kSeries) {
-            const bar = currentCandles[nextIndex];
             try {
-              kChart.setCrosshairPosition(
-                bar.close,
-                bar.time as Parameters<typeof kChart.setCrosshairPosition>[1],
-                kSeries,
-              );
-            } catch {
-              // ignore
-            }
+              kChart.setCrosshairPosition(bar.close, barTime, kSeries);
+            } catch { /* ignore */ }
+          }
+
+          // Sync crosshair to volume chart
+          const vChart = vRef.current?.chart;
+          const vSeries = vRef.current?.volumeSeries;
+          if (vChart && vSeries) {
+            try { vChart.setCrosshairPosition(NaN, barTime, vSeries); } catch { /* ignore */ }
+          }
+
+          // Sync crosshair to indicator chart
+          const iChart = iRef.current?.chart;
+          const iSeries = iRef.current?.histSeries;
+          if (iChart && iSeries) {
+            try { iChart.setCrosshairPosition(NaN, barTime, iSeries); } catch { /* ignore */ }
           }
 
           // Auto-scroll: keep navigated bar visible in the range
           const range = kChart.timeScale().getVisibleLogicalRange();
           if (range) {
             const margin = 5;
+            const size = range.to - range.from;
             if (nextIndex < range.from + margin) {
-              // Scroll left: shift range so bar is near right side
-              const size = range.to - range.from;
-              kChart.timeScale().setVisibleLogicalRange({
-                from: nextIndex - margin,
-                to: nextIndex - margin + size,
-              });
-              // Sync other charts
+              const newFrom = Math.max(0, nextIndex - margin);
               cs.forEach((chart) => {
-                if (!chart || chart === kChart) return;
-                chart.timeScale().setVisibleLogicalRange({
-                  from: nextIndex - margin,
-                  to: nextIndex - margin + size,
-                });
+                if (!chart) return;
+                chart.timeScale().setVisibleLogicalRange({ from: newFrom, to: newFrom + size });
               });
             } else if (nextIndex > range.to - margin) {
-              // Scroll right: shift range so bar is near left side
-              const size = range.to - range.from;
-              kChart.timeScale().setVisibleLogicalRange({
-                from: nextIndex + margin - size,
-                to: nextIndex + margin,
-              });
+              const newTo = nextIndex + margin;
               cs.forEach((chart) => {
-                if (!chart || chart === kChart) return;
-                chart.timeScale().setVisibleLogicalRange({
-                  from: nextIndex + margin - size,
-                  to: nextIndex + margin,
-                });
+                if (!chart) return;
+                chart.timeScale().setVisibleLogicalRange({ from: newTo - size, to: newTo });
               });
             }
           }

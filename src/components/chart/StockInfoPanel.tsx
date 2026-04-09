@@ -3,13 +3,20 @@ import { useChartStore } from '@/stores/chartStore';
 import { useQuotesStore } from '@/stores/quotesStore';
 import styles from './StockInfoPanel.module.css';
 
-function formatVolume(v: number): string {
+function safe(v: unknown, digits = 2): string {
+  if (v == null || typeof v !== 'number' || isNaN(v)) return '--';
+  return v.toFixed(digits);
+}
+
+function formatVolume(v: unknown): string {
+  if (v == null || typeof v !== 'number' || isNaN(v)) return '--';
   if (v >= 1e8) return `${(v / 1e8).toFixed(2)}亿`;
   if (v >= 1e4) return `${(v / 1e4).toFixed(2)}万`;
   return v.toFixed(0);
 }
 
-function formatAmount(v: number): string {
+function formatAmount(v: unknown): string {
+  if (v == null || typeof v !== 'number' || isNaN(v)) return '--';
   if (v >= 1e8) return `${(v / 1e8).toFixed(2)}亿`;
   if (v >= 1e4) return `${(v / 1e4).toFixed(2)}万`;
   return v.toFixed(0);
@@ -27,21 +34,22 @@ export function StockInfoPanel(): React.ReactElement {
   }, [quotes.size, currentCode, fetchAllQuotes]);
 
   const q = quotes.get(currentCode);
-  const up = q ? q.change_pct >= 0 : false;
+  const hasQuoteData = q != null && q.price != null;
+  const up = hasQuoteData ? q.change_pct >= 0 : false;
   const colorClass = up ? styles.up : styles.down;
 
-  const fields: Array<{ label: string; value: string; colorize?: boolean }> = q
+  const fields: Array<{ label: string; value: string; colorize?: boolean }> = hasQuoteData
     ? [
-        { label: '今开', value: q.open.toFixed(2), colorize: true },
-        { label: '昨收', value: q.prev_close.toFixed(2) },
-        { label: '最高', value: q.high.toFixed(2), colorize: true },
-        { label: '最低', value: q.low.toFixed(2), colorize: true },
+        { label: '今开', value: safe(q.open), colorize: true },
+        { label: '昨收', value: safe(q.prev_close) },
+        { label: '最高', value: safe(q.high), colorize: true },
+        { label: '最低', value: safe(q.low), colorize: true },
         { label: '成交量', value: formatVolume(q.volume) },
         { label: '成交额', value: formatAmount(q.amount) },
-        { label: '换手率', value: `${q.turnover_rate.toFixed(2)}%` },
-        { label: '市盈率', value: q.pe_ratio > 0 ? q.pe_ratio.toFixed(2) : '--' },
-        { label: '振幅', value: `${q.amplitude.toFixed(2)}%` },
-        { label: '量比', value: q.quantity_ratio.toFixed(2) },
+        { label: '换手率', value: q.turnover_rate != null ? `${safe(q.turnover_rate)}%` : '--' },
+        { label: '市盈率', value: q.pe_ratio > 0 ? safe(q.pe_ratio) : '--' },
+        { label: '振幅', value: q.amplitude != null ? `${safe(q.amplitude)}%` : '--' },
+        { label: '量比', value: safe(q.quantity_ratio) },
       ]
     : [];
 
@@ -51,17 +59,17 @@ export function StockInfoPanel(): React.ReactElement {
         <span className={styles.code}>{currentCode}</span>
         <span className={styles.name}>{q ? q.name : '--'}</span>
       </div>
-      {q ? (
+      {hasQuoteData ? (
         <>
           <div className={`${styles.price} ${colorClass}`}>
-            {q.price.toFixed(2)}
+            {safe(q.price)}
           </div>
           <div className={styles.changeRow}>
             <span className={colorClass}>
-              {q.change_amount >= 0 ? '+' : ''}{q.change_amount.toFixed(2)}
+              {q.change_amount >= 0 ? '+' : ''}{safe(q.change_amount)}
             </span>
             <span className={`${colorClass} ${styles.changePct}`}>
-              {q.change_pct >= 0 ? '+' : ''}{q.change_pct.toFixed(2)}%
+              {q.change_pct >= 0 ? '+' : ''}{safe(q.change_pct)}%
             </span>
           </div>
           <div className={styles.grid}>

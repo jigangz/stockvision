@@ -38,12 +38,23 @@ export const useQuotesStore = create<QuotesState & QuotesActions>((set, get) => 
   fetchAllQuotes: async () => {
     set({ loading: true });
     try {
-      const res = await fetch('http://localhost:8899/api/data/quotes');
+      // Try /api/data/quotes first (full quote data), fall back to /api/data/stocks (name only)
+      let res = await fetch('http://localhost:8899/api/data/quotes');
       if (res.ok) {
         const list = (await res.json()) as QuoteData[];
         const map = new Map<string, QuoteData>();
-        for (const q of list) {
-          map.set(q.code, q);
+        for (const q of list) map.set(q.code, q);
+        set({ quotes: map });
+        return;
+      }
+
+      // Fallback: fetch stock list for names
+      res = await fetch('http://localhost:8899/api/data/stocks');
+      if (res.ok) {
+        const json = (await res.json()) as { stocks: Array<{ code: string; name: string }> };
+        const map = new Map<string, QuoteData>();
+        for (const s of json.stocks) {
+          map.set(s.code, { code: s.code, name: s.name } as QuoteData);
         }
         set({ quotes: map });
       }

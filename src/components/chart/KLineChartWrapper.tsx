@@ -25,6 +25,9 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
     const candles = useDataStore((s) => s.candles);
     const zoomLevel = useChartStore((s) => s.zoomLevel);
     const rightOffset = useChartSettingsStore((s) => s.rightOffset);
+    const priceScaleMode = useChartSettingsStore((s) => s.priceScaleMode);
+    const priceMin = useChartSettingsStore((s) => s.priceMin);
+    const priceMax = useChartSettingsStore((s) => s.priceMax);
     const activeIndicatorUpper = useIndicatorStore((s) => s.activeIndicatorUpper);
     const activeIndicatorLower = useIndicatorStore((s) => s.activeIndicatorLower);
     const upperParams = useIndicatorStore((s) => s.indicatorParams[s.activeIndicatorUpper]);
@@ -48,8 +51,8 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       if (!chart) return;
       chartRef.current = chart;
 
-      // MA lines on main pane
-      chart.createIndicator({ name: 'MA', calcParams: [5, 10, 20, 60] }, false);
+      // MA lines overlaid on main candle pane
+      chart.createIndicator({ name: 'MA', calcParams: [5, 10, 20, 60] }, false, { id: 'candle_pane' });
 
       // Upper indicator pane (VOL default)
       const upperPaneId = chart.createIndicator('VOL', true, {
@@ -154,6 +157,35 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
         if (lowerPaneId) chart.setPaneOptions({ id: lowerPaneId, height: 100, minHeight: 30 });
       }
     }, [zoomLevel]);
+
+    // Apply Y-axis manual price range
+    useEffect(() => {
+      const chart = chartRef.current;
+      if (!chart) return;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const c = chart as any;
+      const pane = c.getDrawPaneById?.('candle_pane');
+      if (!pane) return;
+      const yAxis = pane.getAxisComponent?.();
+      if (!yAxis) return;
+
+      if (priceScaleMode === 'manual' && priceMin != null && priceMax != null && priceMax > priceMin) {
+        yAxis.setAutoCalcTickFlag(false);
+        yAxis.setRange({
+          from: priceMin,
+          to: priceMax,
+          range: priceMax - priceMin,
+          realFrom: priceMin,
+          realTo: priceMax,
+          realRange: priceMax - priceMin,
+        });
+        c.adjustPaneViewport(false, true, true, true, true);
+      } else {
+        yAxis.setAutoCalcTickFlag(true);
+        c.adjustPaneViewport(false, true, true, true, true);
+      }
+    }, [priceScaleMode, priceMin, priceMax, candles]);
 
     // Apply right offset
     useEffect(() => {

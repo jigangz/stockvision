@@ -467,3 +467,19 @@ created: 2026-04-07
 - Layout: sidebar | chart | info panel renders correctly (P8-1/2/3) ✓
 - TypeScript: 0 errors ✓
 - Python tests: 265/265 passed ✓
+
+## 2026-04-08 — P9-1, P9-2: MarketTable + View Switching
+
+### What was built
+- **`src/components/market/MarketTable.tsx`**: Full-screen market table. Virtual scroll (OVERSCAN=8, ROW_HEIGHT=26). 15 columns: #/代码/名称/涨幅%/现价/涨跌/总量/成交额/今开/最高/最低/昨收/换手%/市盈率/振幅. Watchlist stocks pinned first with `var(--ma5)` yellow left-border. Sort by any column (ascending/descending). Double-click → sets code+market+switches to chart view. Esc/F6 → chart view. Starts/stops polling on mount/unmount.
+- **`src/components/layout/Toolbar.tsx`**: 行情 toggle button in TopNav toolbar; highlights when market view is active.
+- **`src/components/layout/TopNav.tsx`**: Renders `<Toolbar />` in nav bar.
+- **`src/components/layout/MainLayout.tsx`**: Lazy-loads market/MarketTable (default export). F6 global keyboard handler toggles chart↔market. Conditional render: market view gets full `.marketArea` width.
+- **`src/hooks/useKeyboardShortcuts.ts`**: Esc fallback (after drawing/dialog cancel) → switches to market view. F6 → toggles view.
+
+### Key patterns learned
+- `export { MarketTable }; export default MarketTable;` — dual export allows both lazy default import and named import
+- Lazy import: `lazy(() => import('@/components/market/MarketTable'))` works for default exports
+- F6 handler in MainLayout covers both views; Esc in market/MarketTable goes to chart; Esc in ChartContainer keyboard shortcuts goes to market as final fallback
+- Virtual scroll: OVERSCAN=8 rows above/below visible window prevents blank rows during fast scrolling
+- Market derived from code prefix: 6xxx → SH, others → SZ (same as WatchlistSidebar)

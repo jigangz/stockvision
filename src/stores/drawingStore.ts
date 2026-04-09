@@ -15,8 +15,14 @@ export type DrawingToolType =
   | 'vertical'
   | 'channel'
   | 'fibRetracement'
+  | 'fibExtension'
   | 'gannAngle'
+  | 'gannFan'
+  | 'gannGrid'
+  | 'gannSquare'
   | 'rectangle'
+  | 'ellipse'
+  | 'triangle'
   | 'text'
   | 'buyMark'
   | 'sellMark'
@@ -27,7 +33,13 @@ export type DrawingToolType =
   | 'arc'
   | 'fib_fan'
   | 'fib_arc'
-  | 'fib_timezone';
+  | 'fib_timezone'
+  | 'pitchfork'
+  | 'speedResistance'
+  | 'percentLine'
+  | 'cycleLine'
+  | 'regressionChannel'
+  | 'measure';
 
 export interface DrawingStyle {
   color: string;

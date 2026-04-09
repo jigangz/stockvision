@@ -13,9 +13,9 @@ export const darkChartOptions: DeepPartial<ChartOptions> = {
   rightPriceScale: { borderColor: '#333333' },
   timeScale: {
     borderColor: '#333333',
-    rightOffset: 30,
-    minBarSpacing: 2,
-    barSpacing: 8,
+    rightOffset: 23,
+    minBarSpacing: 8,
+    barSpacing: 30,
   },
   handleScroll: {
     mouseWheel: true,

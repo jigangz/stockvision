@@ -43,6 +43,8 @@ export const IndicatorChart = forwardRef<IndicatorChartHandle, IndicatorChartPro
     const setError = useIndicatorStore((s) => s.setError);
 
     const chartRef = useRef<IChartApi | null>(null);
+    // Hidden anchor series to ensure timeScale always renders dates
+    const anchorSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
     // Dynamic series: array of line/histogram series instances
     const seriesRefs = useRef<ISeriesApi<'Line' | 'Histogram'>[]>([]);
     // First histogram series for handle (crosshair compat)
@@ -66,10 +68,21 @@ export const IndicatorChart = forwardRef<IndicatorChartHandle, IndicatorChartPro
         ...darkChartOptions,
         autoSize: true,
         rightPriceScale: { borderColor: '#333333', scaleMargins: { top: 0.2, bottom: 0.2 } },
-        timeScale: { ...darkChartOptions.timeScale, visible: true },
+        layout: { ...darkChartOptions.layout, textColor: '#FFFFFF', fontSize: 12 },
+        timeScale: { ...darkChartOptions.timeScale, visible: true, borderColor: '#555555' },
       });
 
       chartRef.current = chart;
+
+      // Hidden anchor series — carries time data so timeScale always renders dates
+      const anchor = chart.addLineSeries({
+        color: 'transparent',
+        lineWidth: 1,
+        priceLineVisible: false,
+        lastValueVisible: false,
+        crosshairMarkerVisible: false,
+      });
+      anchorSeriesRef.current = anchor;
 
       // Spawn indicator worker
       workerRef.current = new Worker(
@@ -86,6 +99,18 @@ export const IndicatorChart = forwardRef<IndicatorChartHandle, IndicatorChartPro
         workerRef.current = null;
       };
     }, []);
+
+    // Feed candle times to anchor series so timeScale always shows dates
+    useEffect(() => {
+      if (!candles.length || !anchorSeriesRef.current || !chartRef.current) return;
+      const anchorData: LineData<Time>[] = candles.map((c) => ({
+        time: c.time as Time,
+        value: 0,
+      }));
+      anchorSeriesRef.current.setData(anchorData);
+      // Force time scale to recalculate visible range and render date labels
+      chartRef.current.timeScale().fitContent();
+    }, [candles]);
 
     // Fetch indicator data via Web Worker when indicator or candles change
     useEffect(() => {

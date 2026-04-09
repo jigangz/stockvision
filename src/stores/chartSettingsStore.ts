@@ -2,6 +2,21 @@ import { create } from 'zustand';
 
 const CONFIG_URL = 'http://localhost:8899/api/config';
 
+/**
+ * Default rightOffset by period type.
+ * - 分钟线: 30 bars (short-term trading needs more lookahead space)
+ * - 日线: 23 bars (~1 month of trading days)
+ * - 周线: 10 bars (~10 weeks)
+ * - 月线+: 6 bars
+ */
+export function getDefaultRightOffset(period: string): number {
+  if (period.startsWith('min') || period.endsWith('分')) return 30;
+  if (period === 'daily' || period === '日') return 23;
+  if (period === 'weekly' || period === '周') return 10;
+  // monthly, quarterly, yearly
+  return 6;
+}
+
 export interface ChartSettings {
   rightOffset: number;
   displayDays: number;
@@ -19,7 +34,7 @@ interface ChartSettingsActions {
 }
 
 export const useChartSettingsStore = create<ChartSettings & ChartSettingsActions>((set, get) => ({
-  rightOffset: 30,
+  rightOffset: 23,
   displayDays: 280,
   priceScaleMode: 'auto',
   priceMin: null,

@@ -8,28 +8,82 @@ interface ToolDef {
   tooltip: string;
 }
 
-const TOOLS: ToolDef[] = [
-  { type: 'trendline',      icon: '↗',   tooltip: '趋势线' },
-  { type: 'ray',            icon: '→',   tooltip: '射线' },
-  { type: 'segment',        icon: '—',   tooltip: '线段' },
-  { type: 'horizontal',     icon: '━',   tooltip: '水平线' },
-  { type: 'vertical',       icon: '┃',   tooltip: '垂直线' },
-  { type: 'channel',        icon: '⊟',   tooltip: '平行通道' },
-  { type: 'parallel_line',  icon: '∥',   tooltip: '平行线' },
-  { type: 'price_line',     icon: '─P',  tooltip: '价格线' },
-  { type: 'arrow',          icon: '➜',   tooltip: '箭头' },
-  { type: 'arc',            icon: '⌒',   tooltip: '弧线' },
-  { type: 'fibRetracement', icon: 'Fib', tooltip: '斐波那契' },
-  { type: 'fib_fan',        icon: 'F⇗',  tooltip: '斐波扇形' },
-  { type: 'fib_arc',        icon: 'F○',  tooltip: '斐波弧线' },
-  { type: 'fib_timezone',   icon: 'F|',  tooltip: '斐波时间带' },
-  { type: 'gannAngle',      icon: 'G°',  tooltip: '甘氏角' },
-  { type: 'rectangle',      icon: '□',   tooltip: '矩形' },
-  { type: 'text',           icon: 'T',   tooltip: '文字' },
-  { type: 'buyMark',        icon: '▲',   tooltip: '买入标记' },
-  { type: 'sellMark',       icon: '▼',   tooltip: '卖出标记' },
-  { type: 'flatMark',       icon: '●',   tooltip: '持平标记' },
+// Group labels for visual sections
+interface GroupDef { label: string; tools: ToolDef[] }
+
+const TOOL_GROUPS: GroupDef[] = [
+  {
+    label: '线段',
+    tools: [
+      { type: 'trendline',      icon: '↗',  tooltip: '趋势线' },
+      { type: 'ray',            icon: '→',  tooltip: '射线' },
+      { type: 'segment',        icon: '—',  tooltip: '线段' },
+      { type: 'horizontal',     icon: '━',  tooltip: '水平线' },
+      { type: 'vertical',       icon: '┃',  tooltip: '垂直线' },
+      { type: 'arrow',          icon: '➜',  tooltip: '箭头' },
+      { type: 'arc',            icon: '⌒',  tooltip: '弧线' },
+    ],
+  },
+  {
+    label: '通道',
+    tools: [
+      { type: 'channel',        icon: '⊟',  tooltip: '平行通道' },
+      { type: 'parallel_line',  icon: '∥',  tooltip: '平行线' },
+      { type: 'regressionChannel', icon: 'R⊟', tooltip: '回归通道' },
+      { type: 'pitchfork',      icon: '⋔',  tooltip: '安德鲁分叉线' },
+    ],
+  },
+  {
+    label: '斐波那契',
+    tools: [
+      { type: 'fibRetracement', icon: 'Fib', tooltip: '斐波那契回撤' },
+      { type: 'fibExtension',   icon: 'F+',  tooltip: '斐波那契扩展' },
+      { type: 'fib_fan',        icon: 'F⇗',  tooltip: '斐波扇形' },
+      { type: 'fib_arc',        icon: 'F○',  tooltip: '斐波弧线' },
+      { type: 'fib_timezone',   icon: 'F|',  tooltip: '斐波时间带' },
+    ],
+  },
+  {
+    label: '江恩',
+    tools: [
+      { type: 'gannAngle',      icon: 'G°',  tooltip: '江恩角度线' },
+      { type: 'gannFan',        icon: 'G⇗',  tooltip: '江恩扇形' },
+      { type: 'gannGrid',       icon: 'G#',  tooltip: '江恩网格' },
+      { type: 'gannSquare',     icon: 'G□',  tooltip: '江恩正方' },
+    ],
+  },
+  {
+    label: '分析',
+    tools: [
+      { type: 'speedResistance', icon: '⇱',  tooltip: '速阻线' },
+      { type: 'percentLine',    icon: '%',   tooltip: '百分比线' },
+      { type: 'cycleLine',      icon: '|·|', tooltip: '周期线' },
+      { type: 'measure',        icon: '📏',  tooltip: '测量尺' },
+      { type: 'price_line',     icon: '─P',  tooltip: '价格线' },
+    ],
+  },
+  {
+    label: '形状',
+    tools: [
+      { type: 'rectangle',      icon: '□',   tooltip: '矩形' },
+      { type: 'ellipse',        icon: '◯',   tooltip: '椭圆' },
+      { type: 'triangle',       icon: '△',   tooltip: '三角形' },
+    ],
+  },
+  {
+    label: '标注',
+    tools: [
+      { type: 'text',           icon: 'T',   tooltip: '文字' },
+      { type: 'buyMark',        icon: '▲',   tooltip: '买入标记' },
+      { type: 'sellMark',       icon: '▼',   tooltip: '卖出标记' },
+      { type: 'flatMark',       icon: '●',   tooltip: '持平标记' },
+    ],
+  },
 ];
+
+// Flat list for backward compat
+const _TOOLS: ToolDef[] = TOOL_GROUPS.flatMap((g) => g.tools);
+void _TOOLS;
 
 const LINE_STYLES = [
   { value: 'solid'  as const, label: '─',  tooltip: '实线' },
@@ -101,25 +155,24 @@ export function DrawingToolbar(): React.ReactElement {
         <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>画线工具</span>
       </div>
 
-      {/* Tool grid — 7 columns × 2 rows */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(7, 1fr)',
-          gap: 2,
-        }}
-      >
-        {TOOLS.map((t) => (
-          <button
-            key={t.type}
-            title={t.tooltip}
-            onClick={() => setActiveTool(activeTool === t.type ? null : t.type)}
-            style={toolBtn(activeTool === t.type)}
-          >
-            {t.icon}
-          </button>
-        ))}
-      </div>
+      {/* Tool groups */}
+      {TOOL_GROUPS.map((group) => (
+        <div key={group.label} style={{ marginBottom: 2 }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: 9, marginBottom: 1, marginTop: 2 }}>{group.label}</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+            {group.tools.map((t) => (
+              <button
+                key={t.type}
+                title={t.tooltip}
+                onClick={() => setActiveTool(activeTool === t.type ? null : t.type)}
+                style={toolBtn(activeTool === t.type)}
+              >
+                {t.icon}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
 
       {/* Style controls */}
       <div

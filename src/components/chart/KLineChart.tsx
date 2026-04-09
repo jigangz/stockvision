@@ -84,7 +84,9 @@ export const KLineChart = forwardRef<KLineChartHandle>(
         downColor: candleColors.downColor,
         wickUpColor: candleColors.wickUpColor,
         wickDownColor: candleColors.wickDownColor,
-        borderVisible: false,
+        borderVisible: true,
+        borderUpColor: candleColors.borderUpColor,
+        borderDownColor: candleColors.borderDownColor,
       });
 
       const ma5 = chart.addLineSeries({ color: maColors.ma5, lineWidth: 1, priceLineVisible: false, lastValueVisible: false });

@@ -22,7 +22,7 @@ import { StockCodeInput } from '@/components/chart/StockCodeInput';
 import type { FormulaSeries } from '@/components/chart/IndicatorChart';
 import { useDataStore } from '@/stores/dataStore';
 import { useChartStore } from '@/stores/chartStore';
-import { useChartSettingsStore } from '@/stores/chartSettingsStore';
+import { useChartSettingsStore, getDefaultRightOffset } from '@/stores/chartSettingsStore';
 import { useDrawingStore } from '@/stores/drawingStore';
 import { useCrosshairSync } from '@/hooks/useCrosshairSync';
 import { useWheelZoom } from '@/hooks/useWheelZoom';
@@ -67,6 +67,12 @@ export function ChartContainer(): React.ReactElement {
   useEffect(() => {
     void fetchSettings();
   }, [fetchSettings]);
+
+  // Update rightOffset when period changes (smart default per period type)
+  useEffect(() => {
+    const newOffset = getDefaultRightOffset(currentPeriod);
+    setRightOffset(newOffset);
+  }, [currentPeriod, setRightOffset]);
 
   // Compute start date from displayDays
   const getStartDate = useCallback(() => {
@@ -265,8 +271,8 @@ export function ChartContainer(): React.ReactElement {
         <button style={toolbarBtnStyle} onClick={() => setShowSettings(true)}>设置</button>
       </div>
 
-      {/* K-Line area */}
-      <div style={{ ...chartAreaStyle('0 0 55%'), borderBottom: '2px solid #444' }}>
+      {/* K-Line area — flex-grow proportional (55:20:25) */}
+      <div style={{ ...chartAreaStyle('55 1 0'), borderBottom: '2px solid #444' }}>
         <KLineChart ref={klineRef} />
         <DrawingCanvas chart={drawingChart} series={drawingSeries} />
         {showDrawingToolbar && <DrawingToolbar />}
@@ -275,13 +281,13 @@ export function ChartContainer(): React.ReactElement {
       </div>
 
       {/* Volume area */}
-      <div style={{ ...chartAreaStyle('0 0 20%'), borderBottom: '2px solid #444' }}>
+      <div style={{ ...chartAreaStyle('20 1 0'), borderBottom: '2px solid #444' }}>
         <VolumeChart ref={volumeRef} candles={candles} />
         <Crosshair chartArea="volume" />
       </div>
 
       {/* Indicator area with tab bar */}
-      <div style={{ flex: '0 0 25%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: '25 1 0', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
         <IndicatorTabBar />
         <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
           <IndicatorChart ref={indicatorRef} candles={candles} formulaOverlay={formulaOverlay} />

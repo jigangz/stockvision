@@ -96,6 +96,35 @@ const GANN_ANGLES = [
   { rY: 1, rX: 2, label: '2×1' },
 ];
 
+// Full Gann Fan angles (8 angles + 1×1 center)
+const GANN_FAN_ANGLES = [
+  { rY: 8, rX: 1, label: '1×8', color: '#FF4444' },
+  { rY: 4, rX: 1, label: '1×4', color: '#FF8844' },
+  { rY: 3, rX: 1, label: '1×3', color: '#FFCC44' },
+  { rY: 2, rX: 1, label: '1×2', color: '#FFFF44' },
+  { rY: 1, rX: 1, label: '1×1', color: '#FFFFFF' },
+  { rY: 1, rX: 2, label: '2×1', color: '#44FF44' },
+  { rY: 1, rX: 3, label: '3×1', color: '#44CCFF' },
+  { rY: 1, rX: 4, label: '4×1', color: '#4488FF' },
+  { rY: 1, rX: 8, label: '8×1', color: '#8844FF' },
+];
+
+const FIB_EXT_LEVELS = [
+  { level: 0, label: '0.0%' },
+  { level: 0.236, label: '23.6%' },
+  { level: 0.382, label: '38.2%' },
+  { level: 0.5, label: '50.0%' },
+  { level: 0.618, label: '61.8%' },
+  { level: 1.0, label: '100.0%' },
+  { level: 1.272, label: '127.2%' },
+  { level: 1.618, label: '161.8%' },
+  { level: 2.0, label: '200.0%' },
+  { level: 2.618, label: '261.8%' },
+];
+
+const SPEED_LEVELS = [1 / 3, 2 / 3];
+const PERCENT_LEVELS = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0];
+
 function renderDrawing(
   ctx: CanvasRenderingContext2D,
   drawing: Drawing,
@@ -531,6 +560,392 @@ function renderDrawing(
       ctx.fillText(String(FIB_TZ_SEQUENCE[i]), xPos + 2, 12);
     }
     ctx.restore();
+
+  } else if (drawing.type === 'gannFan') {
+    // Full Gann Fan: 9 angle lines from anchor
+    if (!pts[0] || !pts[1]) return;
+    const anchor = pts[0];
+    const signX = pts[1].x >= pts[0].x ? 1 : -1;
+    const signY = pts[1].y <= pts[0].y ? -1 : 1;
+    const baseDx = Math.abs(pts[1].x - pts[0].x) || 40;
+
+    ctx.save();
+    ctx.font = '9px monospace';
+    for (const { rY, rX, label, color } of GANN_FAN_ANGLES) {
+      const unitDx = signX * baseDx;
+      const unitDy = -signY * baseDx * (rY / rX);
+      const end = extendRay(anchor, unitDx, unitDy, canvasWidth, canvasHeight);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = label === '1×1' ? drawing.style.lineWidth + 1 : drawing.style.lineWidth;
+      applyLineStyle(ctx, drawing.style.lineStyle, drawing.style.lineWidth);
+      ctx.beginPath();
+      ctx.moveTo(anchor.x, anchor.y);
+      ctx.lineTo(end.x, end.y);
+      ctx.stroke();
+      ctx.fillStyle = color;
+      ctx.fillText(label, end.x + (signX > 0 ? 2 : -28), end.y - 2);
+    }
+    ctx.fillStyle = drawing.style.color;
+    ctx.beginPath();
+    ctx.arc(anchor.x, anchor.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+  } else if (drawing.type === 'gannGrid') {
+    // Gann Grid: grid of 45-degree lines between two points
+    if (!pts[0] || !pts[1]) return;
+    const x0 = Math.min(pts[0].x, pts[1].x);
+    const x1 = Math.max(pts[0].x, pts[1].x);
+    const y0 = Math.min(pts[0].y, pts[1].y);
+    const y1 = Math.max(pts[0].y, pts[1].y);
+    const w = x1 - x0;
+    const h = y1 - y0;
+    if (w < 2 || h < 2) return;
+
+    ctx.save();
+    // Bounding box
+    ctx.strokeStyle = drawing.style.color;
+    ctx.lineWidth = drawing.style.lineWidth;
+    applyLineStyle(ctx, drawing.style.lineStyle, drawing.style.lineWidth);
+    ctx.strokeRect(x0, y0, w, h);
+
+    // Diagonal grid lines (upward and downward)
+    const step = Math.min(w, h) / 4;
+    ctx.globalAlpha = 0.5;
+    // Rising lines (bottom-left to top-right direction)
+    for (let i = -8; i <= 8; i++) {
+      const startX = x0 + i * step;
+      ctx.beginPath();
+      ctx.moveTo(Math.max(x0, startX), Math.min(y1, y1 - (Math.max(x0, startX) - startX)));
+      // Simple 45-degree lines clipped to box
+      const fromX = Math.max(x0, startX);
+      const fromY = y1;
+      const toX = fromX + h;
+      ctx.moveTo(fromX, fromY);
+      ctx.lineTo(Math.min(x1, toX), Math.max(y0, fromY - (Math.min(x1, toX) - fromX)));
+      ctx.stroke();
+    }
+    // Falling lines (top-left to bottom-right direction)
+    for (let i = -8; i <= 8; i++) {
+      const startX = x0 + i * step;
+      const fromX = Math.max(x0, startX);
+      const fromY = y0;
+      const toX = fromX + h;
+      ctx.beginPath();
+      ctx.moveTo(fromX, fromY);
+      ctx.lineTo(Math.min(x1, toX), Math.min(y1, fromY + (Math.min(x1, toX) - fromX)));
+      ctx.stroke();
+    }
+    ctx.restore();
+
+  } else if (drawing.type === 'gannSquare') {
+    // Gann Square: square grid with diagonals and subdivisions
+    if (!pts[0] || !pts[1]) return;
+    const cx = pts[0].x;
+    const cy = pts[0].y;
+    const size = Math.max(Math.abs(pts[1].x - pts[0].x), Math.abs(pts[1].y - pts[0].y));
+    if (size < 4) return;
+    const half = size / 2;
+
+    ctx.save();
+    ctx.strokeStyle = drawing.style.color;
+    ctx.lineWidth = drawing.style.lineWidth;
+    applyLineStyle(ctx, drawing.style.lineStyle, drawing.style.lineWidth);
+
+    // Outer square
+    ctx.strokeRect(cx - half, cy - half, size, size);
+    // Cross (horizontal + vertical center lines)
+    ctx.beginPath();
+    ctx.moveTo(cx - half, cy); ctx.lineTo(cx + half, cy);
+    ctx.moveTo(cx, cy - half); ctx.lineTo(cx, cy + half);
+    ctx.stroke();
+    // Diagonals
+    ctx.beginPath();
+    ctx.moveTo(cx - half, cy - half); ctx.lineTo(cx + half, cy + half);
+    ctx.moveTo(cx + half, cy - half); ctx.lineTo(cx - half, cy + half);
+    ctx.stroke();
+    // Inner subdivisions (quarter lines)
+    ctx.globalAlpha = 0.4;
+    const quarter = half / 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - half, cy - quarter); ctx.lineTo(cx + half, cy - quarter);
+    ctx.moveTo(cx - half, cy + quarter); ctx.lineTo(cx + half, cy + quarter);
+    ctx.moveTo(cx - quarter, cy - half); ctx.lineTo(cx - quarter, cy + half);
+    ctx.moveTo(cx + quarter, cy - half); ctx.lineTo(cx + quarter, cy + half);
+    ctx.stroke();
+    // Center dot
+    ctx.globalAlpha = 1.0;
+    ctx.fillStyle = drawing.style.color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+  } else if (drawing.type === 'pitchfork') {
+    // Andrews' Pitchfork: median line + 2 parallel lines
+    if (!pts[0] || !pts[1] || !pts[2]) return;
+    // Median point of p1-p2
+    const midX = (pts[1].x + pts[2].x) / 2;
+    const midY = (pts[1].y + pts[2].y) / 2;
+    // Median line: p0 → mid
+    const [ms, me] = extendLineFull(pts[0], { x: midX, y: midY }, canvasWidth, canvasHeight);
+    ctx.beginPath();
+    ctx.moveTo(ms.x, ms.y);
+    ctx.lineTo(me.x, me.y);
+    ctx.stroke();
+    // Upper prong through p1 parallel to median
+    const dx = midX - pts[0].x;
+    const dy = midY - pts[0].y;
+    const p1end = { x: pts[1].x + dx * 10, y: pts[1].y + dy * 10 };
+    ctx.beginPath();
+    ctx.moveTo(pts[1].x, pts[1].y);
+    ctx.lineTo(p1end.x, p1end.y);
+    ctx.stroke();
+    // Lower prong through p2 parallel to median
+    const p2end = { x: pts[2].x + dx * 10, y: pts[2].y + dy * 10 };
+    ctx.beginPath();
+    ctx.moveTo(pts[2].x, pts[2].y);
+    ctx.lineTo(p2end.x, p2end.y);
+    ctx.stroke();
+    // Connect p1-p2
+    ctx.save();
+    ctx.setLineDash([4, 4]);
+    ctx.globalAlpha = 0.4;
+    ctx.beginPath();
+    ctx.moveTo(pts[1].x, pts[1].y);
+    ctx.lineTo(pts[2].x, pts[2].y);
+    ctx.stroke();
+    ctx.restore();
+
+  } else if (drawing.type === 'fibExtension') {
+    // Fibonacci Extension: levels beyond 100%
+    if (!pts[0] || !pts[1]) return;
+    const xLeft = 0;
+    const xRight = canvasWidth;
+    const priceHigh = drawing.points[0].price;
+    const priceLow = drawing.points[1].price;
+    const priceRange = priceHigh - priceLow;
+
+    ctx.save();
+    ctx.font = '10px monospace';
+    for (const { level, label } of FIB_EXT_LEVELS) {
+      const levelPrice = priceLow + priceRange * (1 - level);
+      const y = series.priceToCoordinate(levelPrice);
+      if (y === null) continue;
+
+      if (level === 1.618 || level === 1.0) {
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = drawing.style.lineWidth + 0.5;
+      } else if (level > 1.0) {
+        ctx.strokeStyle = '#FF6600';
+        ctx.lineWidth = drawing.style.lineWidth;
+      } else {
+        ctx.strokeStyle = drawing.style.color;
+        ctx.lineWidth = drawing.style.lineWidth;
+      }
+      applyLineStyle(ctx, drawing.style.lineStyle, drawing.style.lineWidth);
+      ctx.beginPath();
+      ctx.moveTo(xLeft, y);
+      ctx.lineTo(xRight, y);
+      ctx.stroke();
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.fillText(label, xRight - 50, y - 2);
+    }
+    ctx.restore();
+
+  } else if (drawing.type === 'speedResistance') {
+    // Speed Resistance Lines: from p0, through 1/3 and 2/3 of p0-p1 vertical range
+    if (!pts[0] || !pts[1]) return;
+    const anchor = pts[0];
+    ctx.save();
+    ctx.font = '9px monospace';
+    // Base line
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    ctx.lineTo(pts[1].x, pts[1].y);
+    ctx.stroke();
+    // Speed lines at 1/3 and 2/3
+    for (const level of SPEED_LEVELS) {
+      const targetY = pts[0].y + level * (pts[1].y - pts[0].y);
+      const dx = pts[1].x - anchor.x;
+      const dy = targetY - anchor.y;
+      const end = extendRay(anchor, dx, dy, canvasWidth, canvasHeight);
+      ctx.strokeStyle = drawing.style.color;
+      ctx.lineWidth = drawing.style.lineWidth;
+      applyLineStyle(ctx, drawing.style.lineStyle, drawing.style.lineWidth);
+      ctx.beginPath();
+      ctx.moveTo(anchor.x, anchor.y);
+      ctx.lineTo(end.x, end.y);
+      ctx.stroke();
+      ctx.fillStyle = drawing.style.color;
+      ctx.fillText(`${(level * 100).toFixed(0)}%`, end.x + 2, end.y - 2);
+    }
+    ctx.restore();
+
+  } else if (drawing.type === 'percentLine') {
+    // Percentage Lines: horizontal lines at 0%, 12.5%, 25%, ... 100%
+    if (!pts[0] || !pts[1]) return;
+    const priceTop = drawing.points[0].price;
+    const priceBot = drawing.points[1].price;
+    const priceRange = priceTop - priceBot;
+
+    ctx.save();
+    ctx.font = '10px monospace';
+    for (const level of PERCENT_LEVELS) {
+      const price = priceBot + priceRange * (1 - level);
+      const y = series.priceToCoordinate(price);
+      if (y === null) continue;
+      ctx.strokeStyle = level === 0.5 ? '#FFD700' : drawing.style.color;
+      ctx.lineWidth = level === 0.5 ? drawing.style.lineWidth + 0.5 : drawing.style.lineWidth;
+      applyLineStyle(ctx, drawing.style.lineStyle, drawing.style.lineWidth);
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvasWidth, y);
+      ctx.stroke();
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.fillText(`${(level * 100).toFixed(1)}%`, canvasWidth - 50, y - 2);
+    }
+    ctx.restore();
+
+  } else if (drawing.type === 'cycleLine') {
+    // Cycle Lines: equally spaced vertical lines based on p0→p1 distance
+    if (!pts[0] || !pts[1]) return;
+    const baseUnit = pts[1].x - pts[0].x;
+    if (Math.abs(baseUnit) < 1) return;
+    ctx.save();
+    ctx.font = '9px monospace';
+    ctx.fillStyle = drawing.style.color;
+    // Draw cycles extending both directions
+    for (let i = 0; i <= 50; i++) {
+      const xPos = pts[0].x + i * baseUnit;
+      if (xPos < -10 || xPos > canvasWidth + 10) continue;
+      ctx.strokeStyle = i === 0 ? '#FFD700' : drawing.style.color;
+      ctx.lineWidth = drawing.style.lineWidth;
+      applyLineStyle(ctx, drawing.style.lineStyle, drawing.style.lineWidth);
+      ctx.beginPath();
+      ctx.moveTo(xPos, 0);
+      ctx.lineTo(xPos, canvasHeight);
+      ctx.stroke();
+      if (i > 0) ctx.fillText(String(i), xPos + 2, 12);
+    }
+    ctx.restore();
+
+  } else if (drawing.type === 'regressionChannel') {
+    // Linear Regression Channel: main regression line + parallel bands
+    if (!pts[0] || !pts[1]) return;
+    // Simple: use p0→p1 as the regression line, add offset bands
+    const dx = pts[1].x - pts[0].x;
+    const dy = pts[1].y - pts[0].y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len === 0) return;
+    const nx = -dy / len;
+    const ny = dx / len;
+    // Band distance = 20% of the line length
+    const bandDist = len * 0.15;
+
+    // Main regression line
+    const [ms, me] = extendLineFull(pts[0], pts[1], canvasWidth, canvasHeight);
+    ctx.beginPath();
+    ctx.moveTo(ms.x, ms.y);
+    ctx.lineTo(me.x, me.y);
+    ctx.stroke();
+
+    // Upper and lower bands
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    for (const sign of [1, -1]) {
+      const offset = sign * bandDist;
+      const pa = { x: pts[0].x + offset * nx, y: pts[0].y + offset * ny };
+      const pb = { x: pts[1].x + offset * nx, y: pts[1].y + offset * ny };
+      const [bs, be] = extendLineFull(pa, pb, canvasWidth, canvasHeight);
+      ctx.beginPath();
+      ctx.moveTo(bs.x, bs.y);
+      ctx.lineTo(be.x, be.y);
+      ctx.stroke();
+    }
+    // Fill between bands
+    ctx.globalAlpha = 0.05;
+    ctx.fillStyle = drawing.style.color;
+    const upper0 = { x: pts[0].x + bandDist * nx, y: pts[0].y + bandDist * ny };
+    const upper1 = { x: pts[1].x + bandDist * nx, y: pts[1].y + bandDist * ny };
+    const lower0 = { x: pts[0].x - bandDist * nx, y: pts[0].y - bandDist * ny };
+    const lower1 = { x: pts[1].x - bandDist * nx, y: pts[1].y - bandDist * ny };
+    ctx.beginPath();
+    ctx.moveTo(upper0.x, upper0.y);
+    ctx.lineTo(upper1.x, upper1.y);
+    ctx.lineTo(lower1.x, lower1.y);
+    ctx.lineTo(lower0.x, lower0.y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+  } else if (drawing.type === 'measure') {
+    // Measurement tool: shows price diff, % change, bar count
+    if (!pts[0] || !pts[1]) return;
+    const { x: x0, y: y0 } = pts[0];
+    const { x: x1, y: y1 } = pts[1];
+    // Dashed line connecting the two points
+    ctx.save();
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.stroke();
+    // Right angle helper lines
+    ctx.globalAlpha = 0.3;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y0);
+    ctx.lineTo(x1, y1);
+    ctx.stroke();
+    ctx.restore();
+    // Info label
+    const priceDiff = drawing.points[0].price - drawing.points[1].price;
+    const pctChange = drawing.points[0].price !== 0
+      ? ((priceDiff / drawing.points[0].price) * 100).toFixed(2)
+      : '0.00';
+    const barCount = Math.round(Math.abs(x1 - x0) / 30); // approximate
+    const label = `${priceDiff >= 0 ? '+' : ''}${priceDiff.toFixed(2)} (${pctChange}%) ${barCount}根`;
+    ctx.save();
+    ctx.font = '11px monospace';
+    const metrics = ctx.measureText(label);
+    const lx = (x0 + x1) / 2 - metrics.width / 2;
+    const ly = Math.min(y0, y1) - 8;
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(lx - 4, ly - 12, metrics.width + 8, 16);
+    ctx.fillStyle = priceDiff >= 0 ? '#FF4444' : '#00CC66';
+    ctx.fillText(label, lx, ly);
+    ctx.restore();
+
+  } else if (drawing.type === 'ellipse') {
+    // Ellipse: p0=center, p1=corner of bounding box
+    if (!pts[0] || !pts[1]) return;
+    const cx = (pts[0].x + pts[1].x) / 2;
+    const cy = (pts[0].y + pts[1].y) / 2;
+    const rx = Math.abs(pts[1].x - pts[0].x) / 2;
+    const ry = Math.abs(pts[1].y - pts[0].y) / 2;
+    if (rx < 1 || ry < 1) return;
+    ctx.save();
+    ctx.fillStyle = drawing.style.color + '15';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+  } else if (drawing.type === 'triangle') {
+    // Triangle: 3 points
+    if (!pts[0] || !pts[1] || !pts[2]) return;
+    ctx.save();
+    ctx.fillStyle = drawing.style.color + '15';
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    ctx.lineTo(pts[1].x, pts[1].y);
+    ctx.lineTo(pts[2].x, pts[2].y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
   }
 }
 
@@ -723,8 +1138,8 @@ export function DrawingCanvas({ chart, series }: Props) {
         return;
       }
 
-      // 3-point tools: channel, parallel_line
-      if (activeTool === 'channel' || activeTool === 'parallel_line') {
+      // 3-point tools: channel, parallel_line, pitchfork, triangle
+      if (activeTool === 'channel' || activeTool === 'parallel_line' || activeTool === 'pitchfork' || activeTool === 'triangle') {
         if (ppts.length < 2) {
           addPendingPoint(pt);
         } else {

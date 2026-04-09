@@ -586,8 +586,9 @@
         "Tests: test_quotes_endpoint returns 200 with expected fields"
       ],
       "priority": "high",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "",
+      "completed_at": "2026-04-09T03:28:02Z"
     },
     {
       "id": "P7-2",
@@ -599,8 +600,9 @@
         "Tests: test_watchlist_crud (get empty, put list, get back same list)"
       ],
       "priority": "high",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "",
+      "completed_at": "2026-04-09T03:28:02Z"
     },
     {
       "id": "P7-GATE",

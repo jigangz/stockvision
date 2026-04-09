@@ -420,3 +420,18 @@ created: 2026-04-07
 - All 6 phases features verified end-to-end via 240/240 Python tests + 0 TS errors ✓
 - Performance: lazy loading (100 bars initial), Web Worker indicators, pyarrow Parquet reads, screener progress bar ✓ (P6-5)
 - MSI/EXE build: `scripts/build_sidecar.bat` + `npm run tauri build` pipeline documented ✓
+
+## 2026-04-08 — P7-1, P7-2: Quotes API + Watchlist API
+
+### What was built
+- **`python/api/quotes.py`**: New FastAPI router `GET /api/data/quotes`. 30s in-memory cache (`_cache` + `_cache_ts`). When `STOCKVISION_ADAPTER=mock`, returns 8 fake stocks immediately. Otherwise tries `akshare.stock_zh_a_spot_em()` with fallback to mock. Returns all 15 required fields: code/name/price/change_pct/change_amount/volume/amount/open/prev_close/high/low/turnover_rate/pe_ratio/amplitude/quantity_ratio.
+- **`python/api/config.py`**: Added `GET /api/config/watchlist` and `PUT /api/config/watchlist`. Watchlist persisted as JSON array in existing SQLite config table under key `"watchlist"`. Static `/watchlist` routes registered BEFORE dynamic `/{key}` route to prevent shadowing.
+- **`python/main.py`**: Registered `quotes_router`.
+- **`tests/python/test_quotes.py`**: 7 tests — status 200, list return, all 15 fields, 8 mock stocks, numeric fields, string code/name, cache consistency.
+- **`tests/python/test_watchlist.py`**: 5 tests — get empty default, full CRUD, overwrite, empty list, response structure.
+- Total: 265/265 tests pass.
+
+### Key patterns learned
+- Mock mode detection in router: check `os.environ.get("STOCKVISION_ADAPTER")` — conftest.py sets this to "mock" before tests run
+- FastAPI route ordering matters: static paths like `/api/config/watchlist` must be registered before dynamic `/api/config/{key}` or the dynamic route shadows the static one
+- 30s cache: use module-level `_cache` list + `_cache_ts` float; reset both on successful fetch

@@ -20,6 +20,7 @@ from api.heatmap import router as heatmap_router
 from api.capital_flow import router as capital_flow_router
 from api.datasource import router as datasource_router
 from api.backtest import router as backtest_router
+from api.quotes import router as quotes_router
 from data.mock_adapter import MockAdapter
 
 import logging
@@ -73,6 +74,7 @@ app.include_router(heatmap_router)
 app.include_router(capital_flow_router)
 app.include_router(datasource_router)
 app.include_router(backtest_router)
+app.include_router(quotes_router)
 app.include_router(health_monitor_router)
 
 

@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import type { IChartApi } from 'lightweight-charts';
 import type { KLineChartHandle } from '@/components/chart/KLineChart';
+import type { VolumeChartHandle } from '@/components/chart/VolumeChart';
+import type { IndicatorChartHandle } from '@/components/chart/IndicatorChart';
 import { useDataStore } from '@/stores/dataStore';
 import { useChartStore } from '@/stores/chartStore';
 import { useCrosshairStore } from '@/stores/crosshairStore';
@@ -55,6 +57,27 @@ export function useKeyboardShortcuts({
   useEffect(() => {
     optsRef.current = { klineRef, charts, onRefresh, onStockInfo, anyDialogOpen, onCloseDialog, onEnterCode };
   });
+
+  // Track keyboard navigation mode: mouse move/click exits it
+  const keyboardNavRef = useRef(false);
+
+  useEffect(() => {
+    const exitNavMode = () => {
+      if (keyboardNavRef.current) {
+        keyboardNavRef.current = false;
+        // Clear crosshair when exiting keyboard nav mode via mouse
+        useCrosshairStore.getState().clear();
+        const kChart = optsRef.current.klineRef.current?.chart;
+        kChart?.clearCrosshairPosition();
+      }
+    };
+    window.addEventListener('mousemove', exitNavMode);
+    window.addEventListener('click', exitNavMode);
+    return () => {
+      window.removeEventListener('mousemove', exitNavMode);
+      window.removeEventListener('click', exitNavMode);
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -144,21 +167,23 @@ export function useKeyboardShortcuts({
         return;
       }
 
-      // --- Arrow Left/Right: move crosshair one bar ---
+      // --- Arrow Left/Right: move crosshair one bar (keyboard navigation mode) ---
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
         const { activeBarIndex } = useCrosshairStore.getState();
         const currentCandles = useDataStore.getState().candles;
-        if (activeBarIndex === null || !currentCandles.length) {
-          // Initialize to last bar
-          useCrosshairStore.getState().setPosition({ activeBarIndex: currentCandles.length - 1 });
-          return;
-        }
+        if (!currentCandles.length) { e.preventDefault(); return; }
 
-        let nextIndex = activeBarIndex;
-        if (e.key === 'ArrowLeft') nextIndex = Math.max(0, activeBarIndex - 1);
-        if (e.key === 'ArrowRight') nextIndex = Math.min(currentCandles.length - 1, activeBarIndex + 1);
+        // Enter keyboard nav mode
+        keyboardNavRef.current = true;
 
-        if (nextIndex !== activeBarIndex && kChart) {
+        // Initialize to last bar if no active bar
+        const startIdx = activeBarIndex ?? currentCandles.length - 1;
+
+        let nextIndex = startIdx;
+        if (e.key === 'ArrowLeft') nextIndex = Math.max(0, startIdx - 1);
+        if (e.key === 'ArrowRight') nextIndex = Math.min(currentCandles.length - 1, startIdx + 1);
+
+        if (kChart) {
           const kSeries = kRef.current?.candleSeries;
           if (kSeries) {
             const bar = currentCandles[nextIndex];
@@ -172,8 +197,45 @@ export function useKeyboardShortcuts({
               // ignore
             }
           }
-          useCrosshairStore.getState().setPosition({ activeBarIndex: nextIndex });
+
+          // Auto-scroll: keep navigated bar visible in the range
+          const range = kChart.timeScale().getVisibleLogicalRange();
+          if (range) {
+            const margin = 5;
+            if (nextIndex < range.from + margin) {
+              // Scroll left: shift range so bar is near right side
+              const size = range.to - range.from;
+              kChart.timeScale().setVisibleLogicalRange({
+                from: nextIndex - margin,
+                to: nextIndex - margin + size,
+              });
+              // Sync other charts
+              cs.forEach((chart) => {
+                if (!chart || chart === kChart) return;
+                chart.timeScale().setVisibleLogicalRange({
+                  from: nextIndex - margin,
+                  to: nextIndex - margin + size,
+                });
+              });
+            } else if (nextIndex > range.to - margin) {
+              // Scroll right: shift range so bar is near left side
+              const size = range.to - range.from;
+              kChart.timeScale().setVisibleLogicalRange({
+                from: nextIndex + margin - size,
+                to: nextIndex + margin,
+              });
+              cs.forEach((chart) => {
+                if (!chart || chart === kChart) return;
+                chart.timeScale().setVisibleLogicalRange({
+                  from: nextIndex + margin - size,
+                  to: nextIndex + margin,
+                });
+              });
+            }
+          }
         }
+
+        useCrosshairStore.getState().setPosition({ activeBarIndex: nextIndex });
         e.preventDefault();
         return;
       }

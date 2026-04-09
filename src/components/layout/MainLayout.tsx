@@ -8,6 +8,7 @@ import { WatchlistSidebar } from '@/components/chart/WatchlistSidebar';
 import { StockInfoPanel } from '@/components/chart/StockInfoPanel';
 import { ApiHealthToast } from '@/components/ui/ApiHealthToast';
 import { UpdateChecker } from '@/components/ui/UpdateChecker';
+import { KeyboardWizard } from '@/components/chart/KeyboardWizard';
 import { useChartStore } from '@/stores/chartStore';
 
 const MarketTable = lazy(() => import('@/components/market/MarketTable'));
@@ -41,6 +42,7 @@ export function MainLayout() {
       <StatusBar />
       <ApiHealthToast />
       <UpdateChecker />
+      <KeyboardWizard anyDialogOpen={false} />
     </div>
   );
 }

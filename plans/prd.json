@@ -756,8 +756,9 @@
         "Does not trigger when other dialogs are open or input fields focused"
       ],
       "priority": "high",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "KeyboardWizard.tsx: module-level stock cache, digit key opens popup bottom-right, filters by code prefix + name substring, arrow/enter/esc navigation. Added to MainLayout.tsx. Input focus check via inInput guard.",
+      "completed_at": "2026-04-08T22:30:00Z"
     },
     {
       "id": "P10-2",
@@ -773,8 +774,9 @@
         "Works correctly with existing crosshair sync across 3 charts"
       ],
       "priority": "high",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "useKeyboardShortcuts.ts: keyboardNavRef tracks nav mode. Arrow keys initialize to last bar, auto-scroll via setVisibleLogicalRange when bar near edges. mousemove/click clears crosshair and exits nav mode. setCrosshairPosition drives crosshair+timeaxis+InfoTooltip update.",
+      "completed_at": "2026-04-08T22:30:00Z"
     },
     {
       "id": "P10-GATE",

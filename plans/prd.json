@@ -629,8 +629,9 @@
         "TypeScript 0 errors"
       ],
       "priority": "high",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "",
+      "completed_at": "2026-04-08T20:30:00Z"
     },
     {
       "id": "P8-2",
@@ -644,8 +645,9 @@
         "Data from quotesStore"
       ],
       "priority": "high",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "",
+      "completed_at": "2026-04-08T20:30:00Z"
     },
     {
       "id": "P8-3",
@@ -659,8 +661,9 @@
         "Data from quotesStore for current stock"
       ],
       "priority": "high",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "",
+      "completed_at": "2026-04-08T20:30:00Z"
     },
     {
       "id": "P8-4",

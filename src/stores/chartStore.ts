@@ -10,6 +10,7 @@ interface ChartState {
   currentMarket: 'SH' | 'SZ';
   currentPeriod: string;
   timeRange: TimeRange | null;
+  activeView: 'chart' | 'market';
 }
 
 interface ChartActions {
@@ -17,6 +18,7 @@ interface ChartActions {
   setMarket: (market: 'SH' | 'SZ') => void;
   setPeriod: (period: string) => void;
   setTimeRange: (range: TimeRange | null) => void;
+  setActiveView: (view: 'chart' | 'market') => void;
 }
 
 export const useChartStore = create<ChartState & ChartActions>((set) => ({
@@ -24,9 +26,11 @@ export const useChartStore = create<ChartState & ChartActions>((set) => ({
   currentMarket: 'SH',
   currentPeriod: 'daily',
   timeRange: null,
+  activeView: 'chart',
 
   setCode: (code: string) => set({ currentCode: code }),
   setMarket: (market: 'SH' | 'SZ') => set({ currentMarket: market }),
   setPeriod: (period: string) => set({ currentPeriod: period }),
   setTimeRange: (range: TimeRange | null) => set({ timeRange: range }),
+  setActiveView: (view: 'chart' | 'market') => set({ activeView: view }),
 }));

@@ -435,3 +435,22 @@ created: 2026-04-07
 - Mock mode detection in router: check `os.environ.get("STOCKVISION_ADAPTER")` — conftest.py sets this to "mock" before tests run
 - FastAPI route ordering matters: static paths like `/api/config/watchlist` must be registered before dynamic `/api/config/{key}` or the dynamic route shadows the static one
 - 30s cache: use module-level `_cache` list + `_cache_ts` float; reset both on successful fetch
+
+## 2026-04-08 — P8-1, P8-2, P8-3: Frontend Stores + Watchlist Sidebar + Stock Info Panel
+
+### What was built
+- **`src/stores/watchlistStore.ts`**: Zustand store with `codes[]`, `addCode/removeCode/toggleCode`, `fetchWatchlist` (GET /api/config/watchlist), `saveWatchlist` (PUT /api/config/watchlist). Fire-and-forget saves.
+- **`src/stores/quotesStore.ts`**: Zustand store with `quotes Map<string, QuoteData>`, `fetchAllQuotes()` (GET /api/data/quotes), `startPolling/stopPolling` (30s setInterval). `QuoteData` type with all 15 fields.
+- **`src/stores/chartStore.ts`**: Added `activeView: 'chart'|'market'` state + `setActiveView` action.
+- **`src/components/chart/WatchlistSidebar.tsx`**: Left sidebar with collapsible toggle, rows showing name/price/change% from quotesStore, active row highlighted, click sets chartStore code+market. Market auto-derived from code prefix (6xxx=SH, others=SZ).
+- **`src/components/chart/WatchlistSidebar.module.css`**: 160px fixed width, collapses to 24px.
+- **`src/components/chart/StockInfoPanel.tsx`**: Right panel showing current stock detail — code+name header, large price, change amount+%, 10-field grid (今开/昨收/最高/最低/成交量/成交额/换手率/市盈率/振幅/量比).
+- **`src/components/chart/StockInfoPanel.module.css`**: All colors via CSS variables.
+- **`src/components/layout/MainLayout.tsx`**: Added WatchlistSidebar (left of chartArea) + StockInfoPanel (top of infoPanel section).
+
+### Key patterns learned
+- WatchlistSidebar placed directly in MainLayout (not inside ChartContainer) per SIGN-033 — flex siblings, not nested
+- QuotesStore uses `Map<string, QuoteData>` for O(1) lookup by code
+- `startPolling/stopPolling` managed by WatchlistSidebar lifecycle (useEffect cleanup)
+- Market derived from code prefix: 6xxx → SH, others → SZ (standard A-share convention)
+- StockInfoPanel reads quotes in useEffect: only fetches if map is empty (avoids duplicate fetch if polling already started)

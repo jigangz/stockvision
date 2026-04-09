@@ -676,8 +676,9 @@
         "Tooltip: 加入自选 or 移出自选"
       ],
       "priority": "medium",
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "",
+      "completed_at": "2026-04-08T21:00:00Z"
     },
     {
       "id": "P8-GATE",
@@ -690,8 +691,9 @@
         "TypeScript 0 errors"
       ],
       "priority": "high",
-      "passes": false,
-      "notes": "PHASE GATE"
+      "passes": true,
+      "notes": "PHASE GATE",
+      "completed_at": "2026-04-08T21:00:00Z"
     },
     {
       "id": "P9-1",

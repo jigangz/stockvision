@@ -454,3 +454,16 @@ created: 2026-04-07
 - `startPolling/stopPolling` managed by WatchlistSidebar lifecycle (useEffect cleanup)
 - Market derived from code prefix: 6xxx → SH, others → SZ (standard A-share convention)
 - StockInfoPanel reads quotes in useEffect: only fetches if map is empty (avoids duplicate fetch if polling already started)
+
+## 2026-04-08 — P8-4, P8-GATE: Star Button + Phase 8 Gate
+
+### What was built
+- **`src/components/chart/ChartContainer.tsx`**: Added ⭐自选 star button to chart toolbar (left of 画线 button). Imports `useWatchlistStore`. Button color is `#FFD700` (gold) when current stock is in watchlist, `--text-secondary` otherwise. Click calls `toggleCode(currentCode)`. Tooltip shows 加入自选/移出自选.
+
+### Gate criteria verified
+- WatchlistSidebar renders with live quote data (P8-2) ✓
+- StockInfoPanel shows correct current stock details (P8-3) ✓
+- Star button toggles watchlist membership and persists (P8-4) ✓
+- Layout: sidebar | chart | info panel renders correctly (P8-1/2/3) ✓
+- TypeScript: 0 errors ✓
+- Python tests: 265/265 passed ✓

@@ -24,6 +24,7 @@ import { useDataStore } from '@/stores/dataStore';
 import { useChartStore } from '@/stores/chartStore';
 import { useChartSettingsStore, getDefaultRightOffset } from '@/stores/chartSettingsStore';
 import { useDrawingStore } from '@/stores/drawingStore';
+import { useWatchlistStore } from '@/stores/watchlistStore';
 import { useCrosshairSync } from '@/hooks/useCrosshairSync';
 import { useWheelZoom } from '@/hooks/useWheelZoom';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
@@ -43,6 +44,8 @@ export function ChartContainer(): React.ReactElement {
   const saveSettings = useChartSettingsStore((s) => s.saveSettings);
   const fetchSettings = useChartSettingsStore((s) => s.fetchSettings);
   const loadDrawings = useDrawingStore((s) => s.loadDrawings);
+  const watchlistCodes = useWatchlistStore((s) => s.codes);
+  const toggleCode = useWatchlistStore((s) => s.toggleCode);
 
   const [showSettings, setShowSettings] = useState(false);
   const [showPriceScale, setShowPriceScale] = useState(false);
@@ -226,6 +229,8 @@ export function ChartContainer(): React.ReactElement {
     onEnterCode: () => setShowCodeInput(true),
   });
 
+  const inWatchlist = watchlistCodes.includes(currentCode);
+
   const chartAreaStyle = (flex: string): React.CSSProperties => ({
     flex,
     minHeight: 0,
@@ -256,6 +261,11 @@ export function ChartContainer(): React.ReactElement {
     >
       {/* Chart toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: 24, padding: '0 4px', background: 'var(--bg-secondary)', flexShrink: 0 }}>
+        <button
+          style={{ ...toolbarBtnStyle, color: inWatchlist ? '#FFD700' : 'var(--text-secondary)' }}
+          onClick={() => toggleCode(currentCode)}
+          title={inWatchlist ? '移出自选' : '加入自选'}
+        >⭐自选</button>
         <button
           style={{ ...toolbarBtnStyle, color: showDrawingToolbar ? '#FFFF00' : 'var(--text-secondary)' }}
           onClick={() => setShowDrawingToolbar((v) => !v)}

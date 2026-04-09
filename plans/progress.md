@@ -483,3 +483,18 @@ created: 2026-04-07
 - F6 handler in MainLayout covers both views; Esc in market/MarketTable goes to chart; Esc in ChartContainer keyboard shortcuts goes to market as final fallback
 - Virtual scroll: OVERSCAN=8 rows above/below visible window prevents blank rows during fast scrolling
 - Market derived from code prefix: 6xxx → SH, others → SZ (same as WatchlistSidebar)
+
+## 2026-04-08 — P9-1, P9-2: MarketTable + View Switching
+
+### What was built
+- **`src/components/market/MarketTable.tsx`**: Full market table with 15 columns (#/代码/名称/涨幅%/现价/涨跌/总量/成交额/今开/最高/最低/昨收/换手%/市盈率/振幅). Virtual scrolling: ROW_HEIGHT=26, OVERSCAN=8, absolute-positioned rows calculated from scrollTop. Watchlist stocks pinned to top with `var(--ma5)` (yellow) left border. Sortable headers (click same column to flip dir). Double-click row sets code+market+activeView='chart'. All colors via CSS variables. `startPolling` on mount, `stopPolling` on unmount.
+- **`src/components/layout/MainLayout.tsx`**: Already had conditional render for market view (lazy import from `@/components/market/MarketTable`). Added `setActiveView` usage.
+- **`src/components/layout/Toolbar.tsx`**: Already existed with 行情 button that calls `setActiveView`.
+- **`src/hooks/useKeyboardShortcuts.ts`**: Added F6 toggle (chart→market) + Esc → market fallback (when no drawing/dialog active).
+- **`src/components/market/MarketTable.tsx`**: Added F6 listener (market→chart) for when ChartContainer is not mounted.
+
+### Key patterns learned
+- Virtual scroll: track `scrollTop` via `onScroll`, use ResizeObserver on containerRef for height, compute `visibleStart = max(0, floor(scrollTop/ROW_HEIGHT) - OVERSCAN)`. Rows are `position:absolute, top: i*ROW_HEIGHT`.
+- F6 toggle: registered in `useKeyboardShortcuts` (active in chart view) AND in `MarketTable` (active in market view). No conflict because only one of the two is mounted at a time.
+- Market code → SH/SZ: prefix '6' → SH, others → SZ.
+- `colorFn` on column definition returns numeric value; CSS var chosen via `colorVar(v)`.

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 import type { IChartApi, ISeriesApi, SeriesType } from 'lightweight-charts';
-// DrawingCanvas chart/series refs are derived from candles to ensure charts are mounted
 import { KLineChart, type KLineChartHandle } from '@/components/chart/KLineChart';
 import type { VolumeChartHandle } from '@/components/chart/VolumeChart';
 import { IndicatorChart, type IndicatorChartHandle } from '@/components/chart/IndicatorChart';
@@ -8,7 +7,7 @@ import { Crosshair } from '@/components/chart/Crosshair';
 import { InfoTooltip } from '@/components/chart/InfoTooltip';
 import { ChartSettingsDialog } from '@/components/chart/ChartSettingsDialog';
 import { PriceScaleDialog } from '@/components/chart/PriceScaleDialog';
-import { DrawingCanvas } from '@/components/chart/DrawingCanvas';
+import { DrawingBridge } from '@/components/chart/DrawingBridge';
 import { DrawingContextMenu } from '@/components/chart/DrawingContextMenu';
 import { DrawingToolbar } from '@/components/chart/DrawingToolbar';
 import { IndicatorTabBar } from '@/components/chart/IndicatorTabBar';
@@ -62,8 +61,6 @@ export function ChartContainer(): React.ReactElement {
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [formulaOverlay, setFormulaOverlay] = useState<FormulaSeries[]>([]);
   const [showDrawingToolbar, setShowDrawingToolbar] = useState(false);
-  const [drawingChart, setDrawingChart] = useState<IChartApi | null>(null);
-  const [drawingSeries, setDrawingSeries] = useState<ISeriesApi<SeriesType> | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
 
   const klineRef = useRef<KLineChartHandle>(null);
@@ -152,15 +149,6 @@ export function ChartContainer(): React.ReactElement {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [candles, allLoaded, loadingMore]);
-
-  // Set drawing chart/series refs once charts are mounted (candles trigger mount)
-  useEffect(() => {
-    if (candles.length > 0) {
-      setDrawingChart(klineRef.current?.chart ?? null);
-      setDrawingSeries(klineRef.current?.candleSeries ?? null);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [candles]);
 
   // Build chart entries for crosshair sync (memoize to avoid re-subscriptions)
   const crosshairEntries = useMemo(() => {
@@ -308,7 +296,7 @@ export function ChartContainer(): React.ReactElement {
         }}
       >
         <KLineChart ref={klineRef} />
-        <DrawingCanvas chart={drawingChart} series={drawingSeries} />
+        <DrawingBridge chart={null} />
         {showDrawingToolbar && <DrawingToolbar />}
         <Crosshair chartArea="kline" />
         <InfoTooltip />

@@ -131,18 +131,6 @@ export function PriceScaleDialog({ onClose }: Props) {
         </div>
 
         <div style={{ ...row, opacity: mode === 'manual' ? 1 : 0.4 }}>
-          <span style={label}>最低价</span>
-          <input
-            style={inputStyle}
-            type="number"
-            step="0.01"
-            value={priceMin}
-            disabled={mode === 'auto'}
-            onChange={(e) => setPriceMin(e.target.value)}
-          />
-        </div>
-
-        <div style={{ ...row, opacity: mode === 'manual' ? 1 : 0.4 }}>
           <span style={label}>最高价</span>
           <input
             style={inputStyle}
@@ -151,6 +139,18 @@ export function PriceScaleDialog({ onClose }: Props) {
             value={priceMax}
             disabled={mode === 'auto'}
             onChange={(e) => setPriceMax(e.target.value)}
+          />
+        </div>
+
+        <div style={{ ...row, opacity: mode === 'manual' ? 1 : 0.4 }}>
+          <span style={label}>最低价</span>
+          <input
+            style={inputStyle}
+            type="number"
+            step="0.01"
+            value={priceMin}
+            disabled={mode === 'auto'}
+            onChange={(e) => setPriceMin(e.target.value)}
           />
         </div>
 

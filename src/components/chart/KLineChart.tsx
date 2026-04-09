@@ -130,7 +130,7 @@ export const KLineChart = forwardRef<KLineChartHandle>(
         api.candle.applyOptions({
           autoscaleInfoProvider: () => ({
             priceRange: { minValue: priceMin, maxValue: priceMax },
-            margins: { above: 0.05, below: 0.05 },
+            margins: { above: 0, below: 0 },
           }),
         });
       } else {

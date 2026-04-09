@@ -1,0 +1,56 @@
+{
+  "repo": "jigangz/stockvision",
+  "branchName": "main",
+  "version": "0.3.1",
+  "verifyCommand": "npm run typecheck && cd python && pytest ../tests/python/ -v && cd ..",
+  "features": [
+    {
+      "id": "BUG-1",
+      "title": "Backend health + StatusBar connection status",
+      "priority": "high",
+      "passes": false
+    },
+    {
+      "id": "BUG-2",
+      "title": "Stock name display + SH/SZ market fix + TopNav dynamic",
+      "priority": "high",
+      "passes": false
+    },
+    {
+      "id": "BUG-3",
+      "title": "Price scale dialog layout + manual range accuracy",
+      "priority": "medium",
+      "passes": false
+    },
+    {
+      "id": "BUG-4",
+      "title": "Drawing right-click context menu (edit/delete/lock)",
+      "priority": "medium",
+      "passes": false
+    },
+    {
+      "id": "BUG-5",
+      "title": "Up/Down keys zoom in/out (hide panels progressively)",
+      "priority": "high",
+      "passes": false
+    },
+    {
+      "id": "BUG-6",
+      "title": "Dual indicator sections + right-click params + header labels",
+      "priority": "high",
+      "passes": false
+    },
+    {
+      "id": "BUG-7",
+      "title": "StatusBar version from package.json + NaN time axis fix",
+      "priority": "low",
+      "passes": false
+    },
+    {
+      "id": "BUG-GATE",
+      "title": "Final gate: all bugs verified, typecheck + tests pass",
+      "priority": "high",
+      "passes": false
+    }
+  ]
+}

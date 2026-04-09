@@ -21,10 +21,10 @@ export function StockInfoPanel(): React.ReactElement {
   const fetchAllQuotes = useQuotesStore((s) => s.fetchAllQuotes);
 
   useEffect(() => {
-    if (quotes.size === 0) {
+    if (quotes.size === 0 || !quotes.has(currentCode)) {
       void fetchAllQuotes();
     }
-  }, [quotes.size, fetchAllQuotes]);
+  }, [quotes.size, currentCode, fetchAllQuotes]);
 
   const q = quotes.get(currentCode);
   const up = q ? q.change_pct >= 0 : false;

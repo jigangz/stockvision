@@ -745,6 +745,9 @@ def calculate(data: list[dict], indicator: str, params: dict | None = None) -> d
     df = df.sort_values("time").reset_index(drop=True)
 
     func = INDICATOR_FUNCS[indicator]
-    result = func(df)
+    if params:
+        result = func(df, **params)
+    else:
+        result = func(df)
     result["indicator"] = indicator
     return result

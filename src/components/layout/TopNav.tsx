@@ -1,5 +1,7 @@
 import { PeriodSelector } from '@/components/chart/PeriodSelector';
 import { Toolbar } from './Toolbar';
+import { useChartStore } from '@/stores/chartStore';
+import { useQuotesStore } from '@/stores/quotesStore';
 
 const navStyles: Record<string, React.CSSProperties> = {
   nav: {
@@ -21,9 +23,13 @@ const navStyles: Record<string, React.CSSProperties> = {
 };
 
 export function TopNav() {
+  const currentCode = useChartStore((s) => s.currentCode);
+  const quotes = useQuotesStore((s) => s.quotes);
+  const quote = quotes.get(currentCode);
+
   return (
     <nav style={navStyles.nav}>
-      <span style={navStyles.stockCode}>000001 平安银行</span>
+      <span style={navStyles.stockCode}>{currentCode} {quote?.name || '--'}</span>
       <PeriodSelector />
       <Toolbar />
     </nav>

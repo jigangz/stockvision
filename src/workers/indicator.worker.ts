@@ -12,6 +12,7 @@ interface CandleInput {
 interface WorkerRequest {
   candles: CandleInput[];
   indicator: string;
+  params?: Record<string, number>;
 }
 
 interface WorkerResult {
@@ -25,12 +26,12 @@ interface WorkerError {
 }
 
 self.onmessage = async (event: MessageEvent<WorkerRequest>): Promise<void> => {
-  const { candles, indicator } = event.data;
+  const { candles, indicator, params } = event.data;
   try {
     const res = await fetch('http://localhost:8899/api/indicators/calculate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: candles, indicator }),
+      body: JSON.stringify({ data: candles, indicator, params: params ?? null }),
     });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: ${res.statusText}`);

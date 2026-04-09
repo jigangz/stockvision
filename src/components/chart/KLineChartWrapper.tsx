@@ -128,9 +128,9 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       const chart = chartRef.current;
       if (!chart || !candles.length) return;
 
-      // Re-trigger DataLoader by resetting the symbol — this causes getBars to be
-      // called again with type='init', which will read the latest candlesRef.current
-      chart.setSymbol({ ticker: 'stock', pricePrecision: 2, volumePrecision: 0 });
+      // Force DataLoader re-trigger by using a unique ticker each time.
+      // setSymbol with the same ticker is a no-op in KLineChart v10.
+      chart.setSymbol({ ticker: `stock-${Date.now()}`, pricePrecision: 2, volumePrecision: 0 });
     }, [candles]);
 
     // Update upper indicator when selection changes

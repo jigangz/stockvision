@@ -7,6 +7,16 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+/// Kill the python-backend sidecar. Called before relaunch during updates
+/// so the old process doesn't linger.
+#[tauri::command]
+fn kill_sidecar(state: tauri::State<'_, SidecarChild>) {
+    let mut guard = state.0.lock().unwrap();
+    if let Some(child) = guard.take() {
+        let _ = child.kill();
+    }
+}
+
 /// Global handle to the running Python sidecar child process.
 /// Stored so we can kill it when the app exits.
 struct SidecarChild(Mutex<Option<tauri_plugin_shell::process::CommandChild>>);
@@ -53,7 +63,7 @@ pub fn run() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![greet, kill_sidecar])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

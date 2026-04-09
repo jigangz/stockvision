@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
+import { invoke } from '@tauri-apps/api/core';
 
 type UpdateState = 'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'error' | 'latest';
 
@@ -55,6 +56,8 @@ export function UpdateChecker() {
   }, []);
 
   const doRelaunch = useCallback(async () => {
+    // Kill python-backend sidecar before relaunch so it doesn't linger
+    try { await invoke('kill_sidecar'); } catch { /* ignore */ }
     await relaunch();
   }, []);
 

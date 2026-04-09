@@ -153,7 +153,8 @@
       "id": "MIG-GATE",
       "title": "Final gate: typecheck passes, no lightweight-charts references remain",
       "priority": "high",
-      "passes": false,
+      "passes": true,
+      "completed_at": "2026-04-09",
       "description": "Verify: npm run typecheck passes, grep -r lightweight-charts src/ returns nothing, all features preserved"
     }
   ]

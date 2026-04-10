@@ -44,6 +44,12 @@ class TdxAdapter(DataAdapter):
 
     def __init__(self, data_dir: str):
         self.data_dir = Path(data_dir)
+        # Auto-detect vipdoc location (may be nested one level deeper)
+        if not (self.data_dir / "vipdoc").exists():
+            for child in self.data_dir.iterdir():
+                if (child / "vipdoc").is_dir():
+                    self.data_dir = child
+                    break
 
     def _resolve_path(self, code: str, market: str, period: str = "daily") -> Path:
         """Resolve the binary file path for a given stock and period."""

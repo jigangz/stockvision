@@ -21,6 +21,30 @@ from data import storage as _storage
 router = APIRouter(prefix="/api/datasource", tags=["datasource"])
 
 
+def _find_vipdoc(directory: str) -> str | None:
+    """Find the vipdoc directory, searching up to 2 levels deep.
+
+    Handles cases like:
+      D:\\股票\\TDX\\vipdoc          → direct
+      D:\\股票\\TDX\\new_tdx\\vipdoc → one level deeper
+      D:\\股票\\TDX\\tdx\\vipdoc     → one level deeper
+    """
+    import os
+    # Direct: directory/vipdoc
+    direct = os.path.join(directory, "vipdoc")
+    if os.path.isdir(direct):
+        return direct
+    # One level deeper: directory/*/vipdoc
+    try:
+        for name in os.listdir(directory):
+            sub = os.path.join(directory, name, "vipdoc")
+            if os.path.isdir(sub):
+                return sub
+    except OSError:
+        pass
+    return None
+
+
 # ──────────────────────────────────────────────────────────────
 # Config
 # ──────────────────────────────────────────────────────────────
@@ -116,6 +140,9 @@ def _switch_adapter(sources: list[dict]) -> None:
             if not directory:
                 logger.warning("TDX enabled but no directory configured")
                 continue
+            if not _find_vipdoc(directory):
+                logger.warning(f"TDX enabled but vipdoc not found in {directory}")
+                continue
             try:
                 from data.tdx_adapter import TdxAdapter
                 adapter = TdxAdapter(directory)
@@ -181,24 +208,25 @@ def test_connection(body: dict = Body(...)) -> dict:
         if not os.path.isdir(directory):
             return {"ok": False, "message": f"目录不存在: {directory}"}
 
-        # Search for .day files in vipdoc subdirectories
+        # Auto-detect vipdoc location: could be at directory/vipdoc or nested one level deeper
+        vipdoc_root = _find_vipdoc(directory)
+        if not vipdoc_root:
+            return {"ok": False, "message": "未找到 vipdoc 目录，请确认路径正确（应包含 vipdoc 子目录）"}
+
+        # Search for data files in vipdoc subdirectories
         day_count = 0
         min5_count = 0
         min1_count = 0
         for market in ["sh", "sz", "bj"]:
-            lday = os.path.join(directory, "vipdoc", market, "lday")
-            fzline = os.path.join(directory, "vipdoc", market, "fzline")
-            minline = os.path.join(directory, "vipdoc", market, "minline")
+            lday = os.path.join(vipdoc_root, market, "lday")
+            fzline = os.path.join(vipdoc_root, market, "fzline")
+            minline = os.path.join(vipdoc_root, market, "minline")
             if os.path.isdir(lday):
                 day_count += len([f for f in os.listdir(lday) if f.endswith(".day")])
             if os.path.isdir(fzline):
                 min5_count += len([f for f in os.listdir(fzline) if f.endswith(".5")])
             if os.path.isdir(minline):
                 min1_count += len([f for f in os.listdir(minline) if f.endswith(".1")])
-
-        # Also check if .day files are directly in the directory
-        if day_count == 0:
-            day_count = len([f for f in os.listdir(directory) if f.endswith(".day")])
 
         if day_count > 0 or min5_count > 0 or min1_count > 0:
             parts = []
@@ -209,7 +237,7 @@ def test_connection(body: dict = Body(...)) -> dict:
             if min1_count:
                 parts.append(f"{min1_count} 个1分钟文件")
             return {"ok": True, "message": f"找到 {'、'.join(parts)}"}
-        return {"ok": False, "message": "未找到通达信数据文件，请确认路径包含 vipdoc 目录"}
+        return {"ok": False, "message": "vipdoc 目录中未找到数据文件（.day / .5 / .1）"}
 
     return {"ok": False, "message": f"未知数据源: {source_id}"}
 

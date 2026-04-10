@@ -1,10 +1,14 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { init, dispose, ActionType } from 'klinecharts';
 import type { Chart } from 'klinecharts';
+import '@/chart/perBarGrid'; // register PER_BAR_GRID indicator
+import '@/chart/customYAxis'; // register manualRangeYAxis
+import { manualPriceRange } from '@/chart/customYAxis';
 import { useDataStore } from '@/stores/dataStore';
 import { useChartStore } from '@/stores/chartStore';
 import { useChartSettingsStore } from '@/stores/chartSettingsStore';
 import { useIndicatorStore } from '@/stores/indicatorStore';
+import { useMAStore, getMACalcParams } from '@/stores/maStore';
 import { toKLineData } from '@/chart/dataAdapter';
 import { darkStyles } from '@/theme/klineTheme';
 
@@ -37,6 +41,7 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
     const priceMax = useChartSettingsStore((s) => s.priceMax);
     const activeIndicatorUpper = useIndicatorStore((s) => s.activeIndicatorUpper);
     const activeIndicatorLower = useIndicatorStore((s) => s.activeIndicatorLower);
+    const maLines = useMAStore((s) => s.lines);
     const upperParams = useIndicatorStore((s) => s.indicatorParams[s.activeIndicatorUpper]);
     const lowerParams = useIndicatorStore((s) => s.indicatorParams[s.activeIndicatorLower]);
 
@@ -60,8 +65,15 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       if (!chart) return;
       chartRef.current = chart;
 
+      // Use custom Y-axis that can inject manual min/max tick labels
+      chart.setPaneOptions({ id: 'candle_pane', axisOptions: { name: 'manualRangeYAxis' } });
+
+      // Per-bar vertical grid lines (custom indicator drawn behind candles)
+      chart.createIndicator({ name: 'PER_BAR_GRID' }, false, { id: 'candle_pane' });
+
       // MA lines overlaid on main candle pane
-      chart.createIndicator({ name: 'MA', calcParams: [5, 10, 20, 60] }, false, { id: 'candle_pane' });
+      const initialMAParams = getMACalcParams(useMAStore.getState().lines);
+      chart.createIndicator({ name: 'MA', calcParams: initialMAParams.length > 0 ? initialMAParams : [5, 10, 20, 60] }, false, { id: 'candle_pane' });
 
       // Upper indicator pane (VOL default)
       const upperPaneId = chart.createIndicator('VOL', true, {
@@ -130,7 +142,7 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       chart.applyNewData(toKLineData(candles), !store.allLoaded);
     }, [candles]);
 
-    // Update upper indicator when selection changes
+    // Update upper indicator when selection or params change
     useEffect(() => {
       const chart = chartRef.current;
       const paneId = upperPaneIdRef.current;
@@ -139,20 +151,25 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       const calcParams = upperParams ? Object.values(upperParams) : undefined;
       const prevName = prevUpperNameRef.current;
 
-      // Create new indicator first so the pane is never empty (prevents pane destruction)
-      chart.createIndicator(
-        { name: activeIndicatorUpper, ...(calcParams ? { calcParams } : {}) },
-        false,
-        { id: paneId },
-      );
-      // Remove old indicator by name (pane survives because new one exists)
-      if (prevName !== activeIndicatorUpper) {
+      if (prevName === activeIndicatorUpper) {
+        // Same indicator, just params changed — use overrideIndicator
+        chart.overrideIndicator(
+          { name: activeIndicatorUpper, ...(calcParams ? { calcParams } : {}) },
+          paneId,
+        );
+      } else {
+        // Different indicator — create new, then remove old
+        chart.createIndicator(
+          { name: activeIndicatorUpper, ...(calcParams ? { calcParams } : {}) },
+          false,
+          { id: paneId },
+        );
         chart.removeIndicator(paneId, prevName);
+        prevUpperNameRef.current = activeIndicatorUpper;
       }
-      prevUpperNameRef.current = activeIndicatorUpper;
     }, [activeIndicatorUpper, upperParams]);
 
-    // Update lower indicator when selection changes
+    // Update lower indicator when selection or params change
     useEffect(() => {
       const chart = chartRef.current;
       const paneId = lowerPaneIdRef.current;
@@ -161,16 +178,34 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       const calcParams = lowerParams ? Object.values(lowerParams) : undefined;
       const prevName = prevLowerNameRef.current;
 
-      chart.createIndicator(
-        { name: activeIndicatorLower, ...(calcParams ? { calcParams } : {}) },
-        false,
-        { id: paneId },
-      );
-      if (prevName !== activeIndicatorLower) {
+      if (prevName === activeIndicatorLower) {
+        // Same indicator, just params changed — use overrideIndicator
+        chart.overrideIndicator(
+          { name: activeIndicatorLower, ...(calcParams ? { calcParams } : {}) },
+          paneId,
+        );
+      } else {
+        // Different indicator — create new, then remove old
+        chart.createIndicator(
+          { name: activeIndicatorLower, ...(calcParams ? { calcParams } : {}) },
+          false,
+          { id: paneId },
+        );
         chart.removeIndicator(paneId, prevName);
+        prevLowerNameRef.current = activeIndicatorLower;
       }
-      prevLowerNameRef.current = activeIndicatorLower;
     }, [activeIndicatorLower, lowerParams]);
+
+    // Update MA lines when maStore changes
+    useEffect(() => {
+      const chart = chartRef.current;
+      if (!chart) return;
+      const calcParams = getMACalcParams(maLines);
+      chart.overrideIndicator(
+        { name: 'MA', calcParams: calcParams.length > 0 ? calcParams : [0] },
+        'candle_pane',
+      );
+    }, [maLines]);
 
     // Handle zoom level — minimize/restore indicator panes (v9 uses height trick)
     useEffect(() => {
@@ -189,7 +224,7 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       }
     }, [zoomLevel]);
 
-    // Apply Y-axis manual price range
+    // Apply Y-axis manual price range + boundary lines + lock scrolling
     useEffect(() => {
       const chart = chartRef.current;
       if (!chart) return;
@@ -201,20 +236,96 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       const yAxis = pane.getAxisComponent?.();
       if (!yAxis) return;
 
+      // Remove previous min/max price lines
+      chart.removeOverlay('__price_min_line');
+      chart.removeOverlay('__price_max_line');
+
       if (priceScaleMode === 'manual' && priceMin != null && priceMax != null && priceMax > priceMin) {
+        // Calculate tick interval using same algorithm as KLineChart (nice(range/8))
+        const range = priceMax - priceMin;
+        const rawInterval = range / 8;
+        const exp = Math.floor(Math.log10(rawInterval));
+        const exp10 = Math.pow(10, exp);
+        const f = rawInterval / exp10;
+        let nf: number;
+        if (f < 1.5) nf = 1;
+        else if (f < 2.5) nf = 2;
+        else if (f < 3.5) nf = 3;
+        else if (f < 4.5) nf = 4;
+        else if (f < 5.5) nf = 5;
+        else if (f < 6.5) nf = 6;
+        else nf = 8;
+        const tickInterval = nf * exp10;
+
+        // Smart buffer: just enough to show tick labels at the edges
+        // Extend so the tick nearest to min/max is inside the visible area
+        const halfTick = tickInterval * 0.3;
+        const displayMin = priceMin - halfTick;
+        const displayMax = priceMax + halfTick;
+        const displayRange = displayMax - displayMin;
+
+        // Set global so custom Y-axis injects min/max as tick labels
+        manualPriceRange.enabled = true;
+        manualPriceRange.min = priceMin;
+        manualPriceRange.max = priceMax;
+
         yAxis.setAutoCalcTickFlag(false);
         yAxis.setRange({
-          from: priceMin,
-          to: priceMax,
-          range: priceMax - priceMin,
-          realFrom: priceMin,
-          realTo: priceMax,
-          realRange: priceMax - priceMin,
+          from: displayMin,
+          to: displayMax,
+          range: displayRange,
+          realFrom: displayMin,
+          realTo: displayMax,
+          realRange: displayRange,
         });
         c.adjustPaneViewport(false, true, true, true, true);
+
+        // Check if min/max already appear as ticks
+        const firstTick = Math.ceil(displayMin / tickInterval) * tickInterval;
+        const lastTick = Math.floor(displayMax / tickInterval) * tickInterval;
+        const ticks: number[] = [];
+        for (let t = firstTick; t <= lastTick; t += tickInterval) {
+          ticks.push(Math.round(t * 1e8) / 1e8);
+        }
+        const minIsTick = ticks.some((t) => Math.abs(t - priceMin) < tickInterval * 0.01);
+        const maxIsTick = ticks.some((t) => Math.abs(t - priceMax) < tickInterval * 0.01);
+
+        // Add price line overlays for min/max if they're not already ticks
+        const klineData = chart.getDataList();
+        const ts = klineData.length > 0 ? klineData[0].timestamp : Date.now();
+        if (!maxIsTick) {
+          chart.createOverlay({
+            id: '__price_max_line',
+            name: 'priceLine',
+            points: [{ timestamp: ts, value: priceMax }],
+            styles: {
+              line: { style: 'dashed' as never, dashedValue: [4, 4], size: 1, color: '#2A4488' },
+              text: { color: '#CCCCCC', size: 10, borderSize: 0, backgroundColor: 'transparent' },
+            },
+            lock: true,
+          });
+        }
+        if (!minIsTick) {
+          chart.createOverlay({
+            id: '__price_min_line',
+            name: 'priceLine',
+            points: [{ timestamp: ts, value: priceMin }],
+            styles: {
+              line: { style: 'dashed' as never, dashedValue: [4, 4], size: 1, color: '#2A4488' },
+              text: { color: '#CCCCCC', size: 10, borderSize: 0, backgroundColor: 'transparent' },
+            },
+            lock: true,
+          });
+        }
+
+        // Lock Y-axis dragging in manual mode (preserve custom axis name)
+        chart.setPaneOptions({ id: 'candle_pane', axisOptions: { name: 'manualRangeYAxis', scrollZoomEnabled: false } });
       } else {
+        manualPriceRange.enabled = false;
         yAxis.setAutoCalcTickFlag(true);
         c.adjustPaneViewport(false, true, true, true, true);
+        // Re-enable Y-axis dragging in auto mode (preserve custom axis name)
+        chart.setPaneOptions({ id: 'candle_pane', axisOptions: { name: 'manualRangeYAxis', scrollZoomEnabled: true } });
       }
     }, [priceScaleMode, priceMin, priceMax, candles]);
 

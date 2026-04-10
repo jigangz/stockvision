@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { ActionType } from 'klinecharts';
 import type { KLineChartWrapperHandle } from '@/components/chart/KLineChartWrapper';
-import { useDataStore } from '@/stores/dataStore';
 import { useChartStore } from '@/stores/chartStore';
 import { useCrosshairStore } from '@/stores/crosshairStore';
 import { useDrawingStore } from '@/stores/drawingStore';
@@ -104,17 +103,16 @@ export function useKeyboardShortcuts({
 
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
         const { activeBarIndex } = useCrosshairStore.getState();
-        const currentCandles = useDataStore.getState().candles;
-        if (!currentCandles.length || !chart) { e.preventDefault(); return; }
+        const klineData = chart ? chart.getDataList() : [];
+        if (!klineData.length || !chart) { e.preventDefault(); return; }
 
         keyboardNavRef.current = true;
-        const startIdx = activeBarIndex ?? currentCandles.length - 1;
+        const startIdx = activeBarIndex ?? klineData.length - 1;
         let nextIndex = startIdx;
         if (e.key === 'ArrowLeft') nextIndex = Math.max(0, startIdx - 1);
-        if (e.key === 'ArrowRight') nextIndex = Math.min(currentCandles.length - 1, startIdx + 1);
+        if (e.key === 'ArrowRight') nextIndex = Math.min(klineData.length - 1, startIdx + 1);
 
         chart.scrollToDataIndex(nextIndex);
-        const klineData = chart.getDataList();
         const bar = klineData[nextIndex];
         if (bar) {
           // Convert data point to pixel coordinates for precise crosshair positioning

@@ -204,9 +204,7 @@ function createSimpleTwoPointOverlay(name: string): OverlayTemplate {
   };
 }
 
-// --- Gann Angle Lines (江恩角度线) ---
-// User places 2 points to define the 1×1 angle (base unit).
-// Draws 9 lines from p0 at standard Gann angle ratios.
+// --- Gann shared constants ---
 const GANN_RATIOS = [
   { ratio: 1 / 8, label: '1×8' },
   { ratio: 1 / 4, label: '1×4' },
@@ -224,20 +222,28 @@ const GANN_COLORS = [
   '#66FF66', '#FFCC00', '#FF9933', '#FF6666',
 ];
 
+// --- Gann Angle Lines (江恩角度线) ---
+// Two points: p0 is pivot, p1 determines direction (4 quadrants).
+// 1×1 line goes at 45° in the chosen direction, other lines fan out.
 const gannAngleOverlay: OverlayTemplate = {
   name: 'sv_gannAngle',
-  totalStep: 3,
+  totalStep: 3, // two points
   needDefaultPointFigure: true,
   createPointFigures: ({ coordinates, bounding }) => {
     if (coordinates.length < 2) return [];
     const [p0, p1] = coordinates;
     const dx = p1.x - p0.x;
     const dy = p1.y - p0.y;
-    if (Math.abs(dx) < 1) return [];
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return [];
 
-    // 1×1 slope in pixels
-    const baseSlope = dy / dx;
-    const extendX = bounding.width * 2;
+    // Direction signs determine which quadrant the fan opens toward
+    const dirX = dx >= 0 ? 1 : -1;
+    const dirY = dy >= 0 ? 1 : -1;
+
+    // 1×1 base slope: 45° in the chosen direction (magnitude 1 in pixel space)
+    const baseSlope = dirY / dirX;
+    const extendX = dirX * bounding.width * 3;
+    const labelDist = dirX * Math.min(300, bounding.width * 0.4);
     const figures: unknown[] = [];
 
     for (let i = 0; i < GANN_RATIOS.length; i++) {
@@ -253,11 +259,11 @@ const gannAngleOverlay: OverlayTemplate = {
       figures.push({
         type: 'text',
         attrs: {
-          x: p0.x + 200,
-          y: p0.y + slope * 200 - 10,
+          x: p0.x + labelDist,
+          y: p0.y + slope * labelDist - 10 * dirY,
           text: label,
-          align: 'left',
-          baseline: 'bottom',
+          align: dirX >= 0 ? 'left' : 'right',
+          baseline: dirY >= 0 ? 'top' : 'bottom',
         },
         styles: { color: GANN_COLORS[i], size: 10 },
       });
@@ -267,23 +273,27 @@ const gannAngleOverlay: OverlayTemplate = {
 };
 
 // --- Gann Fan (江恩扇形) ---
-// Same as Gann Angle but also draws lines in the downward direction (mirror).
+// Two points: p0 is pivot, p1 determines direction.
+// Solid lines in chosen direction + dashed mirror in opposite.
 const gannFanOverlay: OverlayTemplate = {
   name: 'sv_gannFan',
-  totalStep: 3,
+  totalStep: 3, // two points
   needDefaultPointFigure: true,
   createPointFigures: ({ coordinates, bounding }) => {
     if (coordinates.length < 2) return [];
     const [p0, p1] = coordinates;
     const dx = p1.x - p0.x;
     const dy = p1.y - p0.y;
-    if (Math.abs(dx) < 1) return [];
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return [];
 
-    const baseSlope = dy / dx;
-    const extendX = bounding.width * 2;
+    const dirX = dx >= 0 ? 1 : -1;
+    const dirY = dy >= 0 ? 1 : -1;
+    const baseSlope = dirY / dirX;
+    const extendX = dirX * bounding.width * 3;
+    const labelDist = dirX * Math.min(250, bounding.width * 0.35);
     const figures: unknown[] = [];
 
-    // Upward fan (from p0 extending right)
+    // Primary fan in chosen direction (solid)
     for (let i = 0; i < GANN_RATIOS.length; i++) {
       const { ratio, label } = GANN_RATIOS[i];
       const slope = baseSlope * ratio;
@@ -295,20 +305,21 @@ const gannFanOverlay: OverlayTemplate = {
       figures.push({
         type: 'text',
         attrs: {
-          x: p0.x + 160,
-          y: p0.y + slope * 160 - 8,
+          x: p0.x + labelDist,
+          y: p0.y + slope * labelDist - 8 * dirY,
           text: label,
-          align: 'left',
-          baseline: 'bottom',
+          align: dirX >= 0 ? 'left' : 'right',
+          baseline: dirY >= 0 ? 'top' : 'bottom',
         },
         styles: { color: GANN_COLORS[i], size: 9 },
       });
     }
 
-    // Downward mirror fan
+    // Mirror fan in opposite Y direction (dashed)
+    const mirrorSlope = -dirY / dirX;
     for (let i = 0; i < GANN_RATIOS.length; i++) {
       const { ratio } = GANN_RATIOS[i];
-      const slope = -baseSlope * ratio;
+      const slope = mirrorSlope * ratio;
       figures.push({
         type: 'line',
         attrs: { coordinates: [p0, { x: p0.x + extendX, y: p0.y + slope * extendX }] },

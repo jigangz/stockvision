@@ -1,8 +1,8 @@
 :root {
-  /* 主背景 */
-  --bg-primary: #000000;
-  --bg-secondary: #1A1A2E;
-  --bg-panel: #0D0D1A;
+  /* 主背景 — 通达信蓝 */
+  --bg-primary: #000830;
+  --bg-secondary: #0A1040;
+  --bg-panel: #060C30;
 
   /* 涨跌颜色 */
   --color-up: #FF4444;
@@ -18,11 +18,11 @@
   /* 文字颜色 */
   --text-primary: #FFFFFF;
   --text-secondary: #CCCCCC;
-  --text-muted: #888888;
+  --text-muted: #7788AA;
 
   /* 网格和边框 */
-  --grid-line: #333333;
-  --border: #2A2A3E;
+  --grid-line: #1A2555;
+  --border: #1E2D5A;
 }
 
 * {

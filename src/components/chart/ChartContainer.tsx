@@ -22,6 +22,8 @@ import { useDrawingStore } from '@/stores/drawingStore';
 import { useWatchlistStore } from '@/stores/watchlistStore';
 import { useIndicatorStore, type IndicatorType } from '@/stores/indicatorStore';
 import { IndicatorParamsDialog } from '@/components/chart/IndicatorParamsDialog';
+import { MAConfigDialog } from '@/components/chart/MAConfigDialog';
+import { useMAStore } from '@/stores/maStore';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 export function ChartContainer(): React.ReactElement {
@@ -52,6 +54,9 @@ export function ChartContainer(): React.ReactElement {
   const [showDrawingToolbar, setShowDrawingToolbar] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
   const [indicatorParamsTarget, setIndicatorParamsTarget] = useState<IndicatorType | null>(null);
+  const maDialogOpen = useMAStore((s) => s.dialogOpen);
+  const openMADialog = useMAStore((s) => s.openDialog);
+  const closeMADialog = useMAStore((s) => s.closeDialog);
   const setActiveSection = useIndicatorStore((s) => s.setActiveSection);
   const activeIndicatorUpper = useIndicatorStore((s) => s.activeIndicatorUpper);
   const activeIndicatorLower = useIndicatorStore((s) => s.activeIndicatorLower);
@@ -84,9 +89,10 @@ export function ChartContainer(): React.ReactElement {
   const anyDialogOpen =
     showSettings || showPriceScale || showIntervalStats || showFormula ||
     showScreener || showHeatmap || showCapitalFlow || showDataSource ||
-    showBacktest || showCodeInput;
+    showBacktest || showCodeInput || maDialogOpen;
 
   const closeTopDialog = useCallback(() => {
+    if (maDialogOpen) { closeMADialog(); return; }
     if (showCodeInput) { setShowCodeInput(false); return; }
     if (showBacktest) { setShowBacktest(false); return; }
     if (showDataSource) { setShowDataSource(false); return; }
@@ -97,7 +103,7 @@ export function ChartContainer(): React.ReactElement {
     if (showIntervalStats) { setShowIntervalStats(false); return; }
     if (showPriceScale) { setShowPriceScale(false); return; }
     if (showSettings) { setShowSettings(false); return; }
-  }, [showCodeInput, showBacktest, showDataSource, showCapitalFlow, showHeatmap, showScreener, showFormula, showIntervalStats, showPriceScale, showSettings]);
+  }, [maDialogOpen, closeMADialog, showCodeInput, showBacktest, showDataSource, showCapitalFlow, showHeatmap, showScreener, showFormula, showIntervalStats, showPriceScale, showSettings]);
 
   const handleRefresh = useCallback(() => {
     const start = getStartDate();
@@ -128,6 +134,16 @@ export function ChartContainer(): React.ReactElement {
     const section = getClickedSection();
     if (section) setActiveSection(section);
   }, [getClickedSection, setActiveSection]);
+
+  const handleChartDoubleClick = useCallback((e: React.MouseEvent) => {
+    // Only trigger MA dialog when double-clicking the MA tooltip area (top-left corner)
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    if (x < 300 && y < 24) {
+      openMADialog();
+    }
+  }, [openMADialog]);
 
   const handleChartContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -163,7 +179,7 @@ export function ChartContainer(): React.ReactElement {
         flexDirection: 'column',
         width: '100%',
         height: '100%',
-        background: '#000000',
+        background: 'var(--bg-primary)',
       }}
     >
       <div
@@ -200,6 +216,7 @@ export function ChartContainer(): React.ReactElement {
       <div
         style={{ flex: 1, minHeight: 0, position: 'relative' }}
         onClick={handleChartClick}
+        onDoubleClick={handleChartDoubleClick}
         onContextMenu={handleChartContextMenu}
       >
         <KLineChartWrapper ref={chartWrapperRef} />
@@ -237,6 +254,7 @@ export function ChartContainer(): React.ReactElement {
         />
       )}
       {formulaOverlay.length > 0 && null}
+      <MAConfigDialog />
       {indicatorParamsTarget && (
         <IndicatorParamsDialog
           indicator={indicatorParamsTarget}

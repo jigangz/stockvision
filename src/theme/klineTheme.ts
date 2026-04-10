@@ -1,23 +1,14 @@
 /**
- * KLineChart dark theme styles (replaces LW Charts darkTheme.ts).
- * Uses CSS variable values directly since KLineChart doesn't support CSS vars.
+ * KLineChart 通达信蓝色主题 styles.
  */
 export const darkStyles: Record<string, unknown> = {
   grid: {
     show: true,
     horizontal: {
-      show: true,
-      size: 1,
-      color: '#333333',
-      style: 'dashed',
-      dashedValue: [2, 2],
+      show: false,
     },
     vertical: {
-      show: true,
-      size: 1,
-      color: '#333333',
-      style: 'dashed',
-      dashedValue: [2, 2],
+      show: false,
     },
   },
   candle: {
@@ -69,8 +60,8 @@ export const darkStyles: Record<string, unknown> = {
         offsetBottom: 16,
         borderRadius: 4,
         borderSize: 1,
-        borderColor: '#555555',
-        color: 'rgba(25, 25, 25, 0.92)',
+        borderColor: '#2A3A6E',
+        color: 'rgba(6, 12, 48, 0.94)',
       },
       text: { size: 11, color: '#CCCCCC' },
     },
@@ -85,46 +76,50 @@ export const darkStyles: Record<string, unknown> = {
       text: { size: 11 },
     },
     lines: [
-      { color: '#FFFF00', size: 1, style: 'solid', smooth: false }, // MA5 / line 1
-      { color: '#FF00FF', size: 1, style: 'solid', smooth: false }, // MA10 / line 2
-      { color: '#00FF00', size: 1, style: 'solid', smooth: false }, // MA20 / line 3
-      { color: '#FFFFFF', size: 1, style: 'solid', smooth: false }, // MA60 / line 4
-      { color: '#FF8800', size: 1, style: 'solid', smooth: false }, // line 5
-      { color: '#00CCFF', size: 1, style: 'solid', smooth: false }, // line 6
+      { color: '#FFFF00', size: 1, style: 'solid', smooth: false }, // MA1 yellow
+      { color: '#FF00FF', size: 1, style: 'solid', smooth: false }, // MA2 magenta
+      { color: '#00FF00', size: 1, style: 'solid', smooth: false }, // MA3 green
+      { color: '#FFFFFF', size: 1, style: 'solid', smooth: false }, // MA4 white
+      { color: '#FF8800', size: 1, style: 'solid', smooth: false }, // MA5 orange
+      { color: '#00CCFF', size: 1, style: 'solid', smooth: false }, // MA6 cyan
+      { color: '#FF6688', size: 1, style: 'solid', smooth: false }, // MA7 pink
+      { color: '#88FF88', size: 1, style: 'solid', smooth: false }, // MA8 light green
+      { color: '#8888FF', size: 1, style: 'solid', smooth: false }, // MA9 light blue
+      { color: '#FFAA44', size: 1, style: 'solid', smooth: false }, // MA10 gold
     ],
   },
   xAxis: {
     show: true,
     size: 'auto',
-    axisLine: { show: true, color: '#555555', size: 1 },
-    tickLine: { show: true, size: 1, length: 3, color: '#555555' },
-    tickText: { show: true, color: '#CCCCCC', size: 10 },
+    axisLine: { show: true, color: '#1E2D5A', size: 1 },
+    tickLine: { show: true, size: 1, length: 3, color: '#1E2D5A' },
+    tickText: { show: true, color: '#7788AA', size: 10 },
   },
   yAxis: {
     show: true,
     size: 'auto',
     position: 'right',
     type: 'normal',
-    axisLine: { show: true, color: '#333333', size: 1 },
-    tickLine: { show: true, size: 1, length: 3, color: '#333333' },
-    tickText: { show: true, color: '#CCCCCC', size: 10 },
+    axisLine: { show: true, color: '#1E2D5A', size: 1 },
+    tickLine: { show: true, size: 1, length: 3, color: '#1E2D5A' },
+    tickText: { show: true, color: '#7788AA', size: 10 },
   },
   separator: {
     size: 2,
-    color: '#444444',
-    activeBackgroundColor: 'rgba(255,255,255,0.1)',
+    color: '#1E2D5A',
+    activeBackgroundColor: 'rgba(100,140,255,0.15)',
   },
   crosshair: {
     show: true,
     horizontal: {
       show: true,
-      line: { show: true, style: 'dashed', dashedValue: [4, 2], size: 1, color: '#888888' },
-      text: { show: true, color: '#000000', borderColor: '#888888', backgroundColor: '#CCCCCC', size: 10, paddingLeft: 4, paddingRight: 4, paddingTop: 2, paddingBottom: 2, borderRadius: 2 },
+      line: { show: true, style: 'dashed', dashedValue: [4, 2], size: 1, color: '#5566AA' },
+      text: { show: true, color: '#FFFFFF', borderColor: '#3355AA', backgroundColor: '#1A2D6E', size: 10, paddingLeft: 4, paddingRight: 4, paddingTop: 2, paddingBottom: 2, borderRadius: 2 },
     },
     vertical: {
       show: true,
-      line: { show: true, style: 'dashed', dashedValue: [4, 2], size: 1, color: '#888888' },
-      text: { show: true, color: '#000000', borderColor: '#888888', backgroundColor: '#CCCCCC', size: 10, paddingLeft: 4, paddingRight: 4, paddingTop: 2, paddingBottom: 2, borderRadius: 2 },
+      line: { show: true, style: 'dashed', dashedValue: [4, 2], size: 1, color: '#5566AA' },
+      text: { show: true, color: '#FFFFFF', borderColor: '#3355AA', backgroundColor: '#1A2D6E', size: 10, paddingLeft: 4, paddingRight: 4, paddingTop: 2, paddingBottom: 2, borderRadius: 2 },
     },
   },
   overlay: {
@@ -136,12 +131,10 @@ export const darkStyles: Record<string, unknown> = {
 };
 
 /** MA indicator line colors (for reference in custom code) */
-export const MA_COLORS = {
-  ma5: '#FFFF00',
-  ma10: '#FF00FF',
-  ma20: '#00FF00',
-  ma60: '#FFFFFF',
-};
+export const MA_COLORS = [
+  '#FFFF00', '#FF00FF', '#00FF00', '#FFFFFF', '#FF8800',
+  '#00CCFF', '#FF6688', '#88FF88', '#8888FF', '#FFAA44',
+];
 
 /** Volume up/down colors */
 export const VOLUME_COLORS = {

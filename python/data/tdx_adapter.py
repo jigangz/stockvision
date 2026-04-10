@@ -274,8 +274,76 @@ class TdxAdapter(DataAdapter):
             result.append(TdxAdapter._merge_candles(chunk))
         return result
 
+    def _load_stock_names(self) -> dict[str, str]:
+        """Parse .tnf files to get stock code → name mapping.
+
+        TDX stores names in T0002/hq_cache/{shs,szs,bjs}.tnf files.
+        Each record is 360 bytes:
+          offset 20: stock code (6 ASCII chars)
+          offset 51: stock name (GBK encoded, null-terminated)
+        """
+        names: dict[str, str] = {}
+        TNF_RECORD_SIZE = 360
+        CODE_OFFSET = 20
+        NAME_OFFSET = 51
+        NAME_LEN = 30
+
+        # Search for tnf files — could be under data_dir or its parent
+        for base in [self.data_dir, self.data_dir.parent]:
+            cache_dir = base / "T0002" / "hq_cache"
+            if not cache_dir.exists():
+                continue
+            for tnf_name in ["shs.tnf", "szs.tnf", "bjs.tnf"]:
+                tnf_path = cache_dir / tnf_name
+                if not tnf_path.exists():
+                    continue
+                try:
+                    data = tnf_path.read_bytes()
+                except OSError:
+                    continue
+
+                # Find first valid stock code to determine record alignment
+                probes = [b"000001", b"600000", b"430002", b"830799", b"430489", b"399001"]
+                record_base = None
+                for probe in probes:
+                    idx = data.find(probe)
+                    if idx >= 0:
+                        record_base = idx - CODE_OFFSET
+                        break
+                if record_base is None:
+                    continue
+
+                i = record_base
+                while i + TNF_RECORD_SIZE <= len(data):
+                    code_raw = data[i + CODE_OFFSET:i + CODE_OFFSET + 6]
+                    try:
+                        code = code_raw.decode("ascii")
+                    except (UnicodeDecodeError, ValueError):
+                        i += TNF_RECORD_SIZE
+                        continue
+                    if not code.isdigit():
+                        i += TNF_RECORD_SIZE
+                        continue
+
+                    name_raw = data[i + NAME_OFFSET:i + NAME_OFFSET + NAME_LEN]
+                    null_pos = name_raw.find(b"\x00")
+                    if null_pos > 0:
+                        name_raw = name_raw[:null_pos]
+                    try:
+                        name = name_raw.decode("gbk")
+                    except (UnicodeDecodeError, ValueError):
+                        name = ""
+
+                    if name:
+                        names[code] = name
+                    i += TNF_RECORD_SIZE
+            break  # found tnf directory, stop searching
+
+        return names
+
     def fetch_stock_list(self) -> list[dict]:
-        """Scan the data directory for available .day files."""
+        """Scan the data directory for available .day files, enriched with names from .tnf."""
+        name_map = self._load_stock_names()
         stocks: list[dict] = []
         for market in ["sh", "sz", "bj"]:
             lday_dir = self.data_dir / "vipdoc" / market / "lday"
@@ -285,7 +353,7 @@ class TdxAdapter(DataAdapter):
                 code = f.stem[2:]  # strip market prefix
                 stocks.append({
                     "code": code,
-                    "name": "",  # TDX binary files don't contain stock names
+                    "name": name_map.get(code, ""),
                     "market": market.upper(),
                 })
         return stocks

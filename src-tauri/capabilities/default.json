@@ -11,6 +11,7 @@
     "shell:allow-stdin-write",
     "updater:default",
     "process:allow-restart",
-    "process:allow-exit"
+    "process:allow-exit",
+    "dialog:allow-open"
   ]
 }

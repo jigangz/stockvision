@@ -1,5 +1,6 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useChartSettingsStore } from '@/stores/chartSettingsStore';
+import { open as openDialog } from '@tauri-apps/plugin-dialog';
 
 const API = 'http://localhost:8899';
 
@@ -193,6 +194,21 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
       setTesting((prev) => ({ ...prev, [src.id]: false }));
     }
   }
+
+  const pickTdxFolder = useCallback(async (idx: number) => {
+    try {
+      const selected = await openDialog({
+        directory: true,
+        multiple: false,
+        title: '选择通达信安装目录',
+      });
+      if (selected && typeof selected === 'string') {
+        updateSource(idx, { directory: selected });
+      }
+    } catch {
+      // User cancelled or dialog not available
+    }
+  }, []);
 
   async function saveConfig(): Promise<void> {
     setSaving(true);
@@ -390,9 +406,16 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
                           type="text"
                           style={inputStyle}
                           value={src.directory ?? ''}
-                          placeholder="通达信安装目录，如 C:\new_tdx"
+                          placeholder="点击右侧按钮选择通达信安装目录"
                           onChange={(e) => updateSource(idx, { directory: e.target.value })}
+                          readOnly
                         />
+                        <button
+                          style={{ ...btnStyle, flexShrink: 0, padding: '3px 10px' }}
+                          onClick={() => void pickTdxFolder(idx)}
+                        >
+                          浏览...
+                        </button>
                       </div>
                       <div style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 66 }}>
                         需包含 vipdoc 子目录。支持 .day (日线) / .5 (5分钟) / .1 (1分钟) 文件。

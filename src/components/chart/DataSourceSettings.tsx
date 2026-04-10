@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useChartSettingsStore } from '@/stores/chartSettingsStore';
+import { useDataStore } from '@/stores/dataStore';
+import { useChartStore } from '@/stores/chartStore';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 
 const API = 'http://localhost:8899';
@@ -118,6 +120,11 @@ const PULL_DAYS_OPTIONS = [
 ];
 
 export function DataSourceSettings({ onClose }: Props): React.ReactElement {
+  const fetchKlineInitial = useDataStore((s) => s.fetchKlineInitial);
+  const currentCode = useChartStore((s) => s.currentCode);
+  const currentMarket = useChartStore((s) => s.currentMarket);
+  const currentPeriod = useChartStore((s) => s.currentPeriod);
+
   const [activeTab, setActiveTab] = useState<Tab>('数据源配置');
   const [config, setConfig] = useState<Config>({
     sources: [],
@@ -218,6 +225,13 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(config),
       });
+
+      // Re-fetch kline data with the new adapter
+      const end = new Date().toISOString().slice(0, 10);
+      const d = new Date();
+      d.setDate(d.getDate() - displayDays);
+      const start = d.toISOString().slice(0, 10);
+      void fetchKlineInitial(currentCode, currentMarket, currentPeriod, start, end);
     } catch {
       undefined;
     } finally {

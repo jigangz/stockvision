@@ -51,9 +51,12 @@ def get_config() -> dict:
 
 @router.put("/config")
 def put_config(body: dict = Body(...)) -> dict:
-    """Persist datasource configuration."""
+    """Persist datasource configuration and switch active adapter."""
     _storage.init_config_table()
     _storage.save_config("datasource_config", json.dumps(body))
+
+    # Switch active adapter based on enabled sources (by priority order)
+    _switch_adapter(body.get("sources", []))
 
     # Reschedule sync job if sync config changed
     try:
@@ -66,6 +69,66 @@ def put_config(body: dict = Body(...)) -> dict:
         pass
 
     return {"ok": True}
+
+
+def _switch_adapter(sources: list[dict]) -> None:
+    """Switch the active data adapter based on enabled sources (priority order)."""
+    import logging
+    from api.data import set_adapter
+
+    logger = logging.getLogger("stockvision.datasource")
+
+    for src in sources:
+        if not src.get("enabled", False):
+            continue
+
+        source_id = src.get("id", "")
+
+        if source_id == "akshare":
+            try:
+                from data.akshare_adapter import AkshareAdapter
+                adapter = AkshareAdapter()
+                set_adapter(adapter)
+                logger.info("Switched to AkshareAdapter")
+                return
+            except Exception as e:
+                logger.warning(f"AKShare unavailable: {e}")
+                continue
+
+        elif source_id == "tushare":
+            api_key = src.get("api_key", "").strip()
+            if not api_key:
+                logger.warning("Tushare enabled but no token configured")
+                continue
+            try:
+                from data.tushare_adapter import TushareAdapter
+                adapter = TushareAdapter(api_key)
+                set_adapter(adapter)
+                logger.info("Switched to TushareAdapter")
+                return
+            except Exception as e:
+                logger.warning(f"Tushare unavailable: {e}")
+                continue
+
+        elif source_id == "tdx":
+            directory = src.get("directory", "").strip()
+            if not directory:
+                logger.warning("TDX enabled but no directory configured")
+                continue
+            try:
+                from data.tdx_adapter import TdxAdapter
+                adapter = TdxAdapter(directory)
+                set_adapter(adapter)
+                logger.info(f"Switched to TdxAdapter ({directory})")
+                return
+            except Exception as e:
+                logger.warning(f"TDX unavailable: {e}")
+                continue
+
+    # No enabled source worked — fallback to MockAdapter
+    from data.mock_adapter import MockAdapter
+    set_adapter(MockAdapter())
+    logger.warning("No enabled data source available, using MockAdapter")
 
 
 # ──────────────────────────────────────────────────────────────

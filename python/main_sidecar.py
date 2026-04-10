@@ -50,25 +50,40 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Adapter init: try AKShare first, fallback to Mock ---
-_adapter_name = "MockAdapter"
-_adapter_env = os.environ.get("STOCKVISION_ADAPTER", "akshare").lower()
+# --- Adapter init: use saved config, fallback to AKShare then Mock ---
+_adapter_env = os.environ.get("STOCKVISION_ADAPTER", "").lower()
 
 if _adapter_env == "mock":
-    adapter = MockAdapter()
+    set_adapter(MockAdapter())
     logger.info("Using MockAdapter (forced via STOCKVISION_ADAPTER=mock)")
 else:
+    # Try to load saved datasource config and init adapter by priority
+    _initialized = False
     try:
-        from data.akshare_adapter import AkshareAdapter
-        adapter = AkshareAdapter()
-        import akshare  # noqa: F401
-        _adapter_name = "AkshareAdapter"
-        logger.info("Using AkshareAdapter (real market data)")
+        from data import storage as _init_storage
+        _init_storage.init_config_table()
+        import json as _json
+        _raw_cfg = _init_storage.load_config("datasource_config")
+        if _raw_cfg:
+            _cfg = _json.loads(_raw_cfg)
+            _sources = _cfg.get("sources", [])
+            from api.datasource import _switch_adapter
+            _switch_adapter(_sources)
+            _initialized = True
+            logger.info("Adapter initialized from saved config")
     except Exception as e:
-        logger.warning(f"AKShare unavailable ({e}), falling back to MockAdapter")
-        adapter = MockAdapter()
+        logger.warning(f"Failed to load saved config: {e}")
 
-set_adapter(adapter)
+    if not _initialized:
+        # Default: try AKShare
+        try:
+            from data.akshare_adapter import AkshareAdapter
+            set_adapter(AkshareAdapter())
+            import akshare  # noqa: F401
+            logger.info("Using AkshareAdapter (default)")
+        except Exception as e:
+            logger.warning(f"AKShare unavailable ({e}), falling back to MockAdapter")
+            set_adapter(MockAdapter())
 
 app.include_router(data_router)
 app.include_router(config_router)
@@ -94,7 +109,9 @@ async def startup_event():
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "adapter": _adapter_name}
+    from api.data import _adapter
+    name = type(_adapter).__name__ if _adapter else "None"
+    return {"status": "ok", "adapter": name}
 
 
 if __name__ == "__main__":

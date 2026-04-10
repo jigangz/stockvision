@@ -1,4 +1,14 @@
+import { useEffect, useState } from 'react';
 import { useHealthMonitor } from '@/hooks/useHealthMonitor';
+
+const API = 'http://localhost:8899';
+
+const ADAPTER_LABELS: Record<string, string> = {
+  AkshareAdapter: 'AKShare',
+  TushareAdapter: 'Tushare',
+  TdxAdapter: '通达信',
+  MockAdapter: 'Mock',
+};
 
 const barStyle: React.CSSProperties = {
   display: 'flex',
@@ -25,12 +35,24 @@ const dotStyle = (connected: boolean): React.CSSProperties => ({
 export function StatusBar() {
   const { status } = useHealthMonitor();
   const connected = status?.healthy ?? false;
+  const [adapterName, setAdapterName] = useState<string>('');
+
+  useEffect(() => {
+    fetch(`${API}/api/health`)
+      .then((r) => r.json())
+      .then((d: { adapter?: string }) => {
+        if (d.adapter) setAdapterName(d.adapter);
+      })
+      .catch(() => undefined);
+  }, [connected]); // re-fetch when connection status changes
+
+  const label = ADAPTER_LABELS[adapterName] ?? adapterName ?? '未知';
 
   return (
     <div style={barStyle}>
       <div style={{ display: 'flex', alignItems: 'center' }}>
         <span style={dotStyle(connected)} />
-        <span>{connected ? 'AKShare' : '未连接'}</span>
+        <span>{connected ? label : '未连接'}</span>
       </div>
       <span>StockVision v{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'}</span>
     </div>

@@ -6,3 +6,4 @@ pyarrow==18.0.0
 # pandas-ta>=0.3.14b1
 akshare>=1.14.0
 tushare>=1.4.0
+apscheduler>=3.10.0

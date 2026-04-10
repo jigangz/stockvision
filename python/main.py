@@ -21,6 +21,7 @@ from api.capital_flow import router as capital_flow_router
 from api.datasource import router as datasource_router
 from api.backtest import router as backtest_router
 from api.quotes import router as quotes_router
+from api.scheduler import router as scheduler_router, init_scheduler
 from data.mock_adapter import MockAdapter
 
 import logging
@@ -76,6 +77,13 @@ app.include_router(datasource_router)
 app.include_router(backtest_router)
 app.include_router(quotes_router)
 app.include_router(health_monitor_router)
+app.include_router(scheduler_router)
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Start background scheduler on app startup."""
+    init_scheduler()
 
 
 @app.get("/api/health")

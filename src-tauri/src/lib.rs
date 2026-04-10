@@ -1,4 +1,6 @@
 use std::sync::Mutex;
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 use tauri::Manager;
 use tauri_plugin_shell::ShellExt;
 
@@ -11,10 +13,34 @@ fn greet(name: &str) -> String {
 /// so the old process doesn't linger.
 #[tauri::command]
 fn kill_sidecar(state: tauri::State<'_, SidecarChild>) {
+    // 1. Kill the managed sidecar child if it exists
     let mut guard = state.0.lock().unwrap();
     if let Some(child) = guard.take() {
         let _ = child.kill();
     }
+    drop(guard);
+
+    // 2. Fallback: kill any python-backend process by port 8899
+    //    This handles cases where the sidecar was started outside Tauri (dev mode)
+    //    or the managed handle lost track of the process.
+    #[cfg(target_os = "windows")]
+    {
+        // Find PID listening on port 8899 and kill it
+        let _ = std::process::Command::new("cmd")
+            .args(["/C", "for /f \"tokens=5\" %a in ('netstat -ano ^| findstr :8899 ^| findstr LISTENING') do taskkill /F /PID %a"])
+            .creation_flags(0x08000000) // CREATE_NO_WINDOW
+            .output();
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = std::process::Command::new("sh")
+            .args(["-c", "lsof -ti:8899 | xargs -r kill -9"])
+            .output();
+    }
+
+    // 3. Brief pause to let the OS reclaim the port
+    std::thread::sleep(std::time::Duration::from_millis(500));
 }
 
 /// Global handle to the running Python sidecar child process.

@@ -24,6 +24,8 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
     const upperPaneIdRef = useRef<string | null>(null);
     const lowerPaneIdRef = useRef<string | null>(null);
     const lastCrosshairPaneIdRef = useRef<string | null>(null);
+    const prevUpperNameRef = useRef<string>('VOL');
+    const prevLowerNameRef = useRef<string>('MACD');
 
     const candles = useDataStore((s) => s.candles);
     const zoomLevel = useChartStore((s) => s.zoomLevel);
@@ -99,7 +101,14 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
         });
       });
 
+      // Resize chart when container size changes (e.g. window maximize)
+      const ro = new ResizeObserver(() => {
+        chartRef.current?.resize();
+      });
+      ro.observe(el);
+
       return () => {
+        ro.disconnect();
         dispose(el);
         chartRef.current = null;
         upperPaneIdRef.current = null;
@@ -123,14 +132,20 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       const paneId = upperPaneIdRef.current;
       if (!chart || !paneId) return;
 
-      // v9: removeIndicator(paneId, name?) — removes all indicators from pane
-      chart.removeIndicator(paneId);
       const calcParams = upperParams ? Object.values(upperParams) : undefined;
+      const prevName = prevUpperNameRef.current;
+
+      // Create new indicator first so the pane is never empty (prevents pane destruction)
       chart.createIndicator(
         { name: activeIndicatorUpper, ...(calcParams ? { calcParams } : {}) },
         false,
         { id: paneId },
       );
+      // Remove old indicator by name (pane survives because new one exists)
+      if (prevName !== activeIndicatorUpper) {
+        chart.removeIndicator(paneId, prevName);
+      }
+      prevUpperNameRef.current = activeIndicatorUpper;
     }, [activeIndicatorUpper, upperParams]);
 
     // Update lower indicator when selection changes
@@ -139,13 +154,18 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       const paneId = lowerPaneIdRef.current;
       if (!chart || !paneId) return;
 
-      chart.removeIndicator(paneId);
       const calcParams = lowerParams ? Object.values(lowerParams) : undefined;
+      const prevName = prevLowerNameRef.current;
+
       chart.createIndicator(
         { name: activeIndicatorLower, ...(calcParams ? { calcParams } : {}) },
         false,
         { id: paneId },
       );
+      if (prevName !== activeIndicatorLower) {
+        chart.removeIndicator(paneId, prevName);
+      }
+      prevLowerNameRef.current = activeIndicatorLower;
     }, [activeIndicatorLower, lowerParams]);
 
     // Handle zoom level — minimize/restore indicator panes (v9 uses height trick)

@@ -54,6 +54,17 @@ def put_config(body: dict = Body(...)) -> dict:
     """Persist datasource configuration."""
     _storage.init_config_table()
     _storage.save_config("datasource_config", json.dumps(body))
+
+    # Reschedule sync job if sync config changed
+    try:
+        from api.scheduler import reschedule
+        reschedule(
+            sync_time=body.get("sync_time", "15:30"),
+            auto_sync=body.get("auto_sync", True),
+        )
+    except Exception:
+        pass
+
     return {"ok": True}
 
 
@@ -105,11 +116,36 @@ def test_connection(body: dict = Body(...)) -> dict:
             return {"ok": False, "message": "请填写通达信安装目录"}
         if not os.path.isdir(directory):
             return {"ok": False, "message": f"目录不存在: {directory}"}
-        # Look for any .day files
-        day_files = [f for f in os.listdir(directory) if f.endswith(".day")]
-        if day_files:
-            return {"ok": True, "message": f"找到 {len(day_files)} 个 .day 文件"}
-        return {"ok": False, "message": "目录中未找到 .day 文件，请确认路径正确"}
+
+        # Search for .day files in vipdoc subdirectories
+        day_count = 0
+        min5_count = 0
+        min1_count = 0
+        for market in ["sh", "sz"]:
+            lday = os.path.join(directory, "vipdoc", market, "lday")
+            fzline = os.path.join(directory, "vipdoc", market, "fzline")
+            minline = os.path.join(directory, "vipdoc", market, "minline")
+            if os.path.isdir(lday):
+                day_count += len([f for f in os.listdir(lday) if f.endswith(".day")])
+            if os.path.isdir(fzline):
+                min5_count += len([f for f in os.listdir(fzline) if f.endswith(".5")])
+            if os.path.isdir(minline):
+                min1_count += len([f for f in os.listdir(minline) if f.endswith(".1")])
+
+        # Also check if .day files are directly in the directory
+        if day_count == 0:
+            day_count = len([f for f in os.listdir(directory) if f.endswith(".day")])
+
+        if day_count > 0 or min5_count > 0 or min1_count > 0:
+            parts = []
+            if day_count:
+                parts.append(f"{day_count} 个日线文件")
+            if min5_count:
+                parts.append(f"{min5_count} 个5分钟文件")
+            if min1_count:
+                parts.append(f"{min1_count} 个1分钟文件")
+            return {"ok": True, "message": f"找到 {'、'.join(parts)}"}
+        return {"ok": False, "message": "未找到通达信数据文件，请确认路径包含 vipdoc 目录"}
 
     return {"ok": False, "message": f"未知数据源: {source_id}"}
 

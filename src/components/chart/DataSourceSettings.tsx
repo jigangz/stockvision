@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { useChartSettingsStore } from '@/stores/chartSettingsStore';
 
 const API = 'http://localhost:8899';
 
@@ -24,6 +25,12 @@ type ImportLog = {
   count: number;
   status: string;
   details: string | null;
+};
+
+type SyncStatus = {
+  scheduler_running: boolean;
+  next_run: string | null;
+  last_sync: { time: string; status: string; message: string } | null;
 };
 
 type Props = { onClose: () => void };
@@ -87,8 +94,27 @@ const inputStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 };
 
-const TABS = ['数据源配置', '自动同步', '手动导入', '导入日志'] as const;
+const rowStyle: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12,
+};
+
+const labelStyle: React.CSSProperties = {
+  fontSize: 12, color: 'var(--text-secondary)', width: 100, flexShrink: 0,
+};
+
+const TABS = ['数据源配置', '数据拉取', '自动同步', '手动导入', '导入日志'] as const;
 type Tab = (typeof TABS)[number];
+
+const PULL_DAYS_OPTIONS = [
+  { label: '30天', value: 30 },
+  { label: '90天', value: 90 },
+  { label: '180天 (半年)', value: 180 },
+  { label: '280天 (默认)', value: 280 },
+  { label: '365天 (1年)', value: 365 },
+  { label: '730天 (2年)', value: 730 },
+  { label: '1095天 (3年)', value: 1095 },
+  { label: '1825天 (5年)', value: 1825 },
+];
 
 export function DataSourceSettings({ onClose }: Props): React.ReactElement {
   const [activeTab, setActiveTab] = useState<Tab>('数据源配置');
@@ -105,7 +131,13 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<string>('');
   const [dragOverDrop, setDragOverDrop] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
+  const [syncing, setSyncing] = useState(false);
   const dragSrcIdx = useRef<number | null>(null);
+
+  const displayDays = useChartSettingsStore((s) => s.displayDays);
+  const setDisplayDays = useChartSettingsStore((s) => s.setDisplayDays);
+  const saveSettings = useChartSettingsStore((s) => s.saveSettings);
 
   // Load config on mount
   useEffect(() => {
@@ -114,6 +146,16 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
       .then((d: Config) => setConfig(d))
       .catch(() => undefined);
   }, []);
+
+  // Load sync status
+  useEffect(() => {
+    if (activeTab === '自动同步') {
+      fetch(`${API}/api/scheduler/status`)
+        .then((r) => r.json())
+        .then((d: SyncStatus) => setSyncStatus(d))
+        .catch(() => undefined);
+    }
+  }, [activeTab, syncing]);
 
   // Load logs when switching to logs tab
   useEffect(() => {
@@ -167,6 +209,23 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
     }
   }
 
+  async function triggerSyncNow(): Promise<void> {
+    setSyncing(true);
+    try {
+      await fetch(`${API}/api/scheduler/trigger`, { method: 'POST' });
+      // Wait a moment then refresh status
+      setTimeout(() => {
+        fetch(`${API}/api/scheduler/status`)
+          .then((r) => r.json())
+          .then((d: SyncStatus) => setSyncStatus(d))
+          .catch(() => undefined)
+          .finally(() => setSyncing(false));
+      }, 2000);
+    } catch {
+      setSyncing(false);
+    }
+  }
+
   // Drag-sort handlers for source priority
   function onDragStart(idx: number): void {
     dragSrcIdx.current = idx;
@@ -199,9 +258,9 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
         body: JSON.stringify({ filename, source }),
       });
       const data = await res.json() as { ok: boolean; message: string; format: string; count: number };
-      setImportResult(data.ok ? `✓ ${data.message} (格式: ${data.format})` : `✗ ${data.message}`);
+      setImportResult(data.ok ? `OK ${data.message} (格式: ${data.format})` : `FAIL ${data.message}`);
     } catch {
-      setImportResult('✗ 网络错误');
+      setImportResult('FAIL 网络错误');
     } finally {
       setImporting(false);
     }
@@ -218,6 +277,11 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
   async function clearLogs(): Promise<void> {
     await fetch(`${API}/api/datasource/logs`, { method: 'DELETE' });
     setLogs([]);
+  }
+
+  async function handleDisplayDaysChange(days: number): Promise<void> {
+    setDisplayDays(days);
+    await saveSettings({ displayDays: days });
   }
 
   const tabBtn = (tab: Tab): React.CSSProperties => ({
@@ -237,7 +301,7 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
         {/* Header */}
         <div style={headerStyle}>
           <span>数据源管理</span>
-          <button style={{ ...btnStyle, border: 'none' }} onClick={onClose}>✕</button>
+          <button style={{ ...btnStyle, border: 'none' }} onClick={onClose}>X</button>
         </div>
 
         {/* Tab bar */}
@@ -249,11 +313,11 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
 
         {/* Body */}
         <div style={bodyStyle}>
-          {/* ── 数据源配置 ── */}
+          {/* == 数据源配置 == */}
           {activeTab === '数据源配置' && (
             <div>
               <p style={{ color: 'var(--text-muted)', fontSize: 11, margin: '0 0 8px' }}>
-                拖动行可调整数据源优先级（从高到低）。
+                拖动行可调整数据源优先级（从高到低）。启用的数据源按优先级依次尝试。
               </p>
               {config.sources.map((src, idx) => (
                 <div
@@ -294,17 +358,24 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
                     </button>
                   </div>
 
-                  {/* AKShare/Tushare API key */}
-                  {(src.id === 'akshare' || src.id === 'tushare') && (
+                  {/* AKShare — no key needed */}
+                  {src.id === 'akshare' && (
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 22 }}>
+                      免费数据源，无需 API Key。支持日线/周线/月线。
+                    </div>
+                  )}
+
+                  {/* Tushare token */}
+                  {src.id === 'tushare' && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 11, color: 'var(--text-muted)', width: 60, flexShrink: 0 }}>
-                        {src.id === 'tushare' ? 'Token:' : 'API Key:'}
+                        Token:
                       </span>
                       <input
                         type="password"
                         style={inputStyle}
                         value={src.api_key ?? ''}
-                        placeholder={src.id === 'akshare' ? '无需 API Key (留空即可)' : '输入 Tushare Token'}
+                        placeholder="输入 Tushare Pro Token (tushare.pro 注册获取)"
                         onChange={(e) => updateSource(idx, { api_key: e.target.value })}
                       />
                     </div>
@@ -312,15 +383,20 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
 
                   {/* 通达信 directory */}
                   {src.id === 'tdx' && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)', width: 60, flexShrink: 0 }}>目录:</span>
-                      <input
-                        type="text"
-                        style={inputStyle}
-                        value={src.directory ?? ''}
-                        placeholder="通达信安装目录，如 C:\TDX\vipdoc"
-                        onChange={(e) => updateSource(idx, { directory: e.target.value })}
-                      />
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)', width: 60, flexShrink: 0 }}>目录:</span>
+                        <input
+                          type="text"
+                          style={inputStyle}
+                          value={src.directory ?? ''}
+                          placeholder="通达信安装目录，如 C:\new_tdx"
+                          onChange={(e) => updateSource(idx, { directory: e.target.value })}
+                        />
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 66 }}>
+                        需包含 vipdoc 子目录。支持 .day (日线) / .5 (5分钟) / .1 (1分钟) 文件。
+                      </div>
                     </div>
                   )}
 
@@ -329,9 +405,9 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
                     <div style={{
                       marginTop: 4,
                       fontSize: 11,
-                      color: testResults[src.id].ok ? 'var(--color-down)' : 'var(--color-up)',
+                      color: testResults[src.id].ok ? '#00CC00' : 'var(--color-up)',
                     }}>
-                      {testResults[src.id].ok ? '✓' : '✗'} {testResults[src.id].message}
+                      {testResults[src.id].ok ? '[OK]' : '[FAIL]'} {testResults[src.id].message}
                     </div>
                   )}
                 </div>
@@ -349,10 +425,58 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
             </div>
           )}
 
-          {/* ── 自动同步 ── */}
+          {/* == 数据拉取 == */}
+          {activeTab === '数据拉取' && (
+            <div>
+              <div style={rowStyle}>
+                <span style={labelStyle}>拉取天数:</span>
+                <select
+                  value={displayDays}
+                  onChange={(e) => void handleDisplayDaysChange(Number(e.target.value))}
+                  style={{ ...inputStyle, width: 200 }}
+                >
+                  {PULL_DAYS_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={rowStyle}>
+                <span style={labelStyle}>自定义天数:</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={3650}
+                  value={displayDays}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    if (v > 0 && v <= 3650) void handleDisplayDaysChange(v);
+                  }}
+                  style={{ ...inputStyle, width: 100 }}
+                />
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>天 (1-3650)</span>
+              </div>
+
+              <div style={{
+                background: 'var(--bg-panel)', border: '1px solid var(--border)',
+                borderRadius: 3, padding: 10, marginTop: 8,
+              }}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.8 }}>
+                  <div>当前设置: 拉取最近 <span style={{ color: '#FFFF00' }}>{displayDays}</span> 天的历史数据</div>
+                  <div>- 30天: 适合短线看盘，加载最快</div>
+                  <div>- 280天 (默认): 约1年数据，满足大部分技术分析需求</div>
+                  <div>- 730天+: 适合长线分析，首次加载较慢</div>
+                  <div style={{ marginTop: 4, color: 'var(--text-muted)' }}>
+                    修改后切换股票或刷新即可生效。数据会缓存到本地 Parquet 文件。
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* == 自动同步 == */}
           {activeTab === '自动同步' && (
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <div style={rowStyle}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 12 }}>
                   <input
                     type="checkbox"
@@ -364,8 +488,8 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
                 </label>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                <span style={{ fontSize: 12, color: 'var(--text-secondary)', width: 80 }}>同步时间:</span>
+              <div style={rowStyle}>
+                <span style={labelStyle}>同步时间:</span>
                 <input
                   type="time"
                   value={config.sync_time}
@@ -375,11 +499,50 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
                 <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>（建议收盘后 15:30）</span>
               </div>
 
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                自动同步将在指定时间从已启用的数据源拉取最新行情数据，并保存到本地 Parquet 文件。
-              </p>
+              {/* Sync status panel */}
+              <div style={{
+                background: 'var(--bg-panel)', border: '1px solid var(--border)',
+                borderRadius: 3, padding: 10, marginTop: 8, marginBottom: 12,
+              }}>
+                <div style={{ fontSize: 12, fontWeight: 'bold', marginBottom: 6 }}>同步状态</div>
+                {syncStatus ? (
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.8 }}>
+                    <div>
+                      调度器: {syncStatus.scheduler_running
+                        ? <span style={{ color: '#00CC00' }}>运行中</span>
+                        : <span style={{ color: 'var(--color-up)' }}>未启动</span>}
+                    </div>
+                    {syncStatus.next_run && (
+                      <div>下次同步: <span style={{ color: '#FFFF00' }}>{syncStatus.next_run}</span></div>
+                    )}
+                    {syncStatus.last_sync && (
+                      <>
+                        <div>上次同步: {syncStatus.last_sync.time}</div>
+                        <div>
+                          状态: {syncStatus.last_sync.status === 'completed'
+                            ? <span style={{ color: '#00CC00' }}>成功</span>
+                            : <span style={{ color: 'var(--color-up)' }}>失败</span>}
+                          {' — '}{syncStatus.last_sync.message}
+                        </div>
+                      </>
+                    )}
+                    {!syncStatus.last_sync && (
+                      <div style={{ color: 'var(--text-muted)' }}>尚未执行过同步</div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>加载中...</div>
+                )}
+              </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button
+                  style={btnStyle}
+                  onClick={() => void triggerSyncNow()}
+                  disabled={syncing}
+                >
+                  {syncing ? '同步中...' : '立即同步'}
+                </button>
                 <button
                   style={{ ...btnStyle, background: 'var(--color-up)', color: '#fff', border: 'none' }}
                   onClick={() => void saveConfig()}
@@ -388,14 +551,19 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
                   {saving ? '保存中...' : '保存设置'}
                 </button>
               </div>
+
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6, marginTop: 12 }}>
+                自动同步将在指定时间（周一至周五）从已启用的数据源拉取最新日线数据，并保存到本地。
+                同步范围：自选股列表中的股票（最多50只），无自选股时同步默认股票。
+              </p>
             </div>
           )}
 
-          {/* ── 手动导入 ── */}
+          {/* == 手动导入 == */}
           {activeTab === '手动导入' && (
             <div>
               <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12 }}>
-                支持格式：CSV、XLSX、通达信 .day/.5/.1 文件。系统自动识别格式。
+                支持格式：CSV、XLSX、通达信 .day (日线) / .5 (5分钟) / .1 (1分钟) 文件。系统自动识别格式。
               </p>
 
               {/* Drop zone */}
@@ -415,9 +583,9 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
                   cursor: 'default',
                 }}
               >
-                <div style={{ fontSize: 28, marginBottom: 6 }}>📂</div>
+                <div style={{ fontSize: 28, marginBottom: 6 }}>+</div>
                 {importing ? '导入中...' : '拖放文件到此处'}
-                <div style={{ fontSize: 10, marginTop: 4 }}>支持 .csv · .xlsx · .xls · .day · .5 · .1</div>
+                <div style={{ fontSize: 10, marginTop: 4 }}>支持 .csv / .xlsx / .xls / .day / .5 / .1</div>
               </div>
 
               {importResult && (
@@ -427,7 +595,7 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
                   border: '1px solid var(--border)',
                   borderRadius: 3,
                   fontSize: 11,
-                  color: importResult.startsWith('✓') ? 'var(--color-down)' : 'var(--color-up)',
+                  color: importResult.startsWith('OK') ? '#00CC00' : 'var(--color-up)',
                   marginBottom: 12,
                 }}>
                   {importResult}
@@ -449,7 +617,7 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
             </div>
           )}
 
-          {/* ── 导入日志 ── */}
+          {/* == 导入日志 == */}
           {activeTab === '导入日志' && (
             <div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
@@ -476,8 +644,8 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
                         <td style={{ padding: '3px 6px', color: 'var(--text-muted)' }}>{log.timestamp}</td>
                         <td style={{ padding: '3px 6px' }}>{log.source}</td>
                         <td style={{ padding: '3px 6px', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{log.filename}</td>
-                        <td style={{ padding: '3px 6px', textAlign: 'right', color: 'var(--color-down)' }}>{log.count}</td>
-                        <td style={{ padding: '3px 6px', color: log.status === 'success' ? 'var(--color-down)' : 'var(--color-up)' }}>
+                        <td style={{ padding: '3px 6px', textAlign: 'right', color: '#00CC00' }}>{log.count}</td>
+                        <td style={{ padding: '3px 6px', color: log.status === 'success' ? '#00CC00' : 'var(--color-up)' }}>
                           {log.status === 'success' ? '成功' : '失败'}
                         </td>
                         <td style={{ padding: '3px 6px', color: 'var(--text-muted)', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

@@ -86,6 +86,7 @@ def _switch_adapter(sources: list[dict]) -> None:
 
         if source_id == "akshare":
             try:
+                import akshare  # noqa: F401 — verify akshare is actually installed
                 from data.akshare_adapter import AkshareAdapter
                 adapter = AkshareAdapter()
                 set_adapter(adapter)

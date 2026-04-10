@@ -75,11 +75,11 @@ else:
         logger.warning(f"Failed to load saved config: {e}")
 
     if not _initialized:
-        # Default: try AKShare
+        # Default: try AKShare (verify the package is actually importable)
         try:
+            import akshare  # noqa: F401
             from data.akshare_adapter import AkshareAdapter
             set_adapter(AkshareAdapter())
-            import akshare  # noqa: F401
             logger.info("Using AkshareAdapter (default)")
         except Exception as e:
             logger.warning(f"AKShare unavailable ({e}), falling back to MockAdapter")

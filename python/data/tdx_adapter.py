@@ -153,7 +153,7 @@ class TdxAdapter(DataAdapter):
     def fetch_stock_list(self) -> list[dict]:
         """Scan the data directory for available .day files."""
         stocks: list[dict] = []
-        for market in ["sh", "sz"]:
+        for market in ["sh", "sz", "bj"]:
             lday_dir = self.data_dir / "vipdoc" / market / "lday"
             if not lday_dir.exists():
                 continue

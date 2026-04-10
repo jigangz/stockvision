@@ -184,7 +184,7 @@ def test_connection(body: dict = Body(...)) -> dict:
         day_count = 0
         min5_count = 0
         min1_count = 0
-        for market in ["sh", "sz"]:
+        for market in ["sh", "sz", "bj"]:
             lday = os.path.join(directory, "vipdoc", market, "lday")
             fzline = os.path.join(directory, "vipdoc", market, "fzline")
             minline = os.path.join(directory, "vipdoc", market, "minline")

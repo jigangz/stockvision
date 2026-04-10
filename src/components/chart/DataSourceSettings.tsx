@@ -226,6 +226,9 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
         body: JSON.stringify(config),
       });
 
+      // Notify StatusBar to refresh adapter name immediately
+      window.dispatchEvent(new Event('adapter-changed'));
+
       // Re-fetch kline data with the new adapter
       const end = new Date().toISOString().slice(0, 10);
       const d = new Date();

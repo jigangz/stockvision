@@ -37,14 +37,20 @@ export function StatusBar() {
   const connected = status?.healthy ?? false;
   const [adapterName, setAdapterName] = useState<string>('');
 
+  // Fetch adapter name on connect + listen for adapter-changed event
   useEffect(() => {
-    fetch(`${API}/api/health`)
-      .then((r) => r.json())
-      .then((d: { adapter?: string }) => {
-        if (d.adapter) setAdapterName(d.adapter);
-      })
-      .catch(() => undefined);
-  }, [connected]); // re-fetch when connection status changes
+    const fetchAdapter = () => {
+      fetch(`${API}/api/health`)
+        .then((r) => r.json())
+        .then((d: { adapter?: string }) => {
+          if (d.adapter) setAdapterName(d.adapter);
+        })
+        .catch(() => undefined);
+    };
+    fetchAdapter();
+    window.addEventListener('adapter-changed', fetchAdapter);
+    return () => window.removeEventListener('adapter-changed', fetchAdapter);
+  }, [connected]);
 
   const label = ADAPTER_LABELS[adapterName] ?? adapterName ?? '未知';
 

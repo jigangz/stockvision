@@ -9,7 +9,24 @@ except ImportError:
     pd = None  # type: ignore
 
 
-DATA_DIR = Path(__file__).parent.parent / "data_store"
+def _get_data_dir() -> Path:
+    """Return a persistent data directory.
+
+    In PyInstaller sidecar mode, __file__ points to a temp folder that is
+    deleted on exit, so we must use a fixed location instead.
+    On Windows: %LOCALAPPDATA%/StockVision/data_store
+    Fallback:   <project_root>/data_store  (dev mode)
+    """
+    import sys, os
+    if hasattr(sys, "_MEIPASS"):
+        # Running as PyInstaller bundle — use persistent AppData path
+        base = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
+        return Path(base) / "StockVision" / "data_store"
+    # Dev mode — relative to project root
+    return Path(__file__).parent.parent / "data_store"
+
+
+DATA_DIR = _get_data_dir()
 DB_PATH = DATA_DIR / "stockvision.db"
 
 

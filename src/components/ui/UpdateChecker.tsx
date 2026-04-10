@@ -12,6 +12,10 @@ export function UpdateChecker() {
   const [error, setError] = useState('');
 
   const checkForUpdate = useCallback(async () => {
+    // Skip in browser dev mode (no Tauri runtime)
+    if (!('__TAURI_INTERNALS__' in window)) {
+      return;
+    }
     setState('checking');
     try {
       const update = await check();

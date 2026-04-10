@@ -9,8 +9,8 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
-/// Kill the python-backend sidecar. Called before relaunch during updates
-/// so the old process doesn't linger.
+/// Kill the python-backend sidecar. Called before update/relaunch
+/// so the old process doesn't hold file locks on python-backend.exe.
 #[tauri::command]
 fn kill_sidecar(state: tauri::State<'_, SidecarChild>) {
     // 1. Kill the managed sidecar child if it exists
@@ -20,15 +20,22 @@ fn kill_sidecar(state: tauri::State<'_, SidecarChild>) {
     }
     drop(guard);
 
-    // 2. Fallback: kill any python-backend process by port 8899
-    //    This handles cases where the sidecar was started outside Tauri (dev mode)
-    //    or the managed handle lost track of the process.
+    // 2. Fallback: kill by image name (covers dev mode, detached processes, etc.)
     #[cfg(target_os = "windows")]
     {
-        // Find PID listening on port 8899 and kill it
-        let _ = std::process::Command::new("cmd")
-            .args(["/C", "for /f \"tokens=5\" %a in ('netstat -ano ^| findstr :8899 ^| findstr LISTENING') do taskkill /F /PID %a"])
+        let _ = std::process::Command::new("taskkill")
+            .args(["/F", "/IM", "python-backend.exe"])
             .creation_flags(0x08000000) // CREATE_NO_WINDOW
+            .output();
+
+        // Also try killing any python.exe on port 8899 (dev mode uses python directly)
+        // powershell is more reliable than cmd for this
+        let _ = std::process::Command::new("powershell")
+            .args([
+                "-NoProfile", "-Command",
+                "Get-NetTCPConnection -LocalPort 8899 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }"
+            ])
+            .creation_flags(0x08000000)
             .output();
     }
 
@@ -39,8 +46,8 @@ fn kill_sidecar(state: tauri::State<'_, SidecarChild>) {
             .output();
     }
 
-    // 3. Brief pause to let the OS reclaim the port
-    std::thread::sleep(std::time::Duration::from_millis(500));
+    // 3. Wait for OS to release file handles and port
+    std::thread::sleep(std::time::Duration::from_millis(1500));
 }
 
 /// Global handle to the running Python sidecar child process.

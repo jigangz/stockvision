@@ -5,7 +5,6 @@ import { useDataStore } from '@/stores/dataStore';
 import { useChartStore } from '@/stores/chartStore';
 import { useChartSettingsStore } from '@/stores/chartSettingsStore';
 import { useIndicatorStore } from '@/stores/indicatorStore';
-import { useCrosshairStore } from '@/stores/crosshairStore';
 import { toKLineData } from '@/chart/dataAdapter';
 import { darkStyles } from '@/theme/klineTheme';
 
@@ -15,6 +14,8 @@ export interface KLineChartWrapperHandle {
   lowerPaneId: string | null;
   /** The paneId the crosshair is currently hovering over */
   lastCrosshairPaneId: string | null;
+  /** The dataIndex the mouse crosshair is currently hovering over */
+  lastHoveredDataIndex: number | null;
 }
 
 export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
@@ -24,6 +25,7 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
     const upperPaneIdRef = useRef<string | null>(null);
     const lowerPaneIdRef = useRef<string | null>(null);
     const lastCrosshairPaneIdRef = useRef<string | null>(null);
+    const lastHoveredDataIndexRef = useRef<number | null>(null);
     const prevUpperNameRef = useRef<string>('VOL');
     const prevLowerNameRef = useRef<string>('MACD');
 
@@ -43,6 +45,7 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       get upperPaneId() { return upperPaneIdRef.current; },
       get lowerPaneId() { return lowerPaneIdRef.current; },
       get lastCrosshairPaneId() { return lastCrosshairPaneIdRef.current; },
+      get lastHoveredDataIndex() { return lastHoveredDataIndexRef.current; },
     }));
 
     // Initialize chart once
@@ -74,14 +77,15 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       });
       lowerPaneIdRef.current = lowerPaneId;
 
-      // Subscribe crosshair changes → crosshairStore + track paneId
+      // Subscribe crosshair changes → track paneId & hovered index in refs
+      // (Don't write to crosshairStore here — only keyboard nav & click do that)
       chart.subscribeAction(ActionType.OnCrosshairChange, (data) => {
         const ch = data as { dataIndex?: number; paneId?: string };
         if (ch?.paneId) {
           lastCrosshairPaneIdRef.current = ch.paneId;
         }
         if (ch?.dataIndex != null) {
-          useCrosshairStore.getState().setPosition({ activeBarIndex: ch.dataIndex });
+          lastHoveredDataIndexRef.current = ch.dataIndex;
         }
       });
 

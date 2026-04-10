@@ -37,11 +37,22 @@ export function useKeyboardShortcuts({
         useCrosshairStore.getState().clear();
       }
     };
+    // Click on chart → set activeBarIndex to the hovered bar (so arrow keys start from there)
+    const handleClick = () => {
+      if (keyboardNavRef.current) {
+        keyboardNavRef.current = false;
+      }
+      const cw = optsRef.current.chartWrapper.current;
+      const idx = cw?.lastHoveredDataIndex;
+      if (idx != null) {
+        useCrosshairStore.getState().setPosition({ activeBarIndex: idx });
+      }
+    };
     window.addEventListener('mousemove', exitNavMode);
-    window.addEventListener('click', exitNavMode);
+    window.addEventListener('click', handleClick);
     return () => {
       window.removeEventListener('mousemove', exitNavMode);
-      window.removeEventListener('click', exitNavMode);
+      window.removeEventListener('click', handleClick);
     };
   }, []);
 

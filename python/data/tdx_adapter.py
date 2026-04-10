@@ -1,4 +1,5 @@
 import struct
+from datetime import datetime, timedelta
 from pathlib import Path
 from data.adapter import DataAdapter
 from models.candle import Candle
@@ -130,25 +131,142 @@ class TdxAdapter(DataAdapter):
                 ))
         return candles
 
+    @staticmethod
+    def _merge_candles(candles: list[Candle]) -> Candle:
+        """Merge multiple candles into one OHLCV bar."""
+        return Candle(
+            date=candles[-1].date,
+            open=candles[0].open,
+            high=max(c.high for c in candles),
+            low=min(c.low for c in candles),
+            close=candles[-1].close,
+            volume=sum(c.volume for c in candles),
+            amount=sum(c.amount for c in candles),
+        )
+
+    @staticmethod
+    def _aggregate_by_key(candles: list[Candle], key_fn) -> list[Candle]:
+        """Generic aggregation: group consecutive candles by key_fn, merge each group."""
+        if not candles:
+            return []
+        result: list[Candle] = []
+        buf: list[Candle] = []
+        cur_key = None
+        for c in candles:
+            k = key_fn(c)
+            if k != cur_key:
+                if buf:
+                    result.append(TdxAdapter._merge_candles(buf))
+                buf = [c]
+                cur_key = k
+            else:
+                buf.append(c)
+        if buf:
+            result.append(TdxAdapter._merge_candles(buf))
+        return result
+
+    @staticmethod
+    def _week_key(c: Candle):
+        dt = datetime.strptime(c.date[:10], "%Y-%m-%d")
+        iso = dt.isocalendar()
+        return iso[0] * 100 + iso[1]
+
+    @staticmethod
+    def _month_key(c: Candle):
+        return c.date[:7]  # "YYYY-MM"
+
+    @staticmethod
+    def _quarter_key(c: Candle):
+        y, m = int(c.date[:4]), int(c.date[5:7])
+        return y * 10 + ((m - 1) // 3)
+
+    @staticmethod
+    def _year_key(c: Candle):
+        return c.date[:4]  # "YYYY"
+
+    @staticmethod
+    def _multi_year_key(c: Candle):
+        """Group by 3-year blocks."""
+        y = int(c.date[:4])
+        return y // 3
+
+    # Periods that aggregate from daily data
+    DAILY_AGG_MAP = {
+        "weekly":     _week_key.__func__,
+        "monthly":    _month_key.__func__,
+        "quarterly":  _quarter_key.__func__,
+        "yearly":     _year_key.__func__,
+        "multi_year": _multi_year_key.__func__,
+    }
+
+    # Periods that aggregate from 5-min data
+    MIN5_AGG_BARS = {
+        "15m": 3,   # 3 x 5min = 15min
+        "30m": 6,   # 6 x 5min = 30min
+        "60m": 12,  # 12 x 5min = 60min
+    }
+
     def fetch_kline(self, code: str, market: str, period: str, start: str, end: str) -> list[Candle]:
         # Normalize period aliases
-        period_normalized = period
-        if period in ("min1", "1分"):
-            period_normalized = "1min"
-        elif period in ("min5", "5分"):
-            period_normalized = "5min"
-
-        filepath = self._resolve_path(code, market, period_normalized)
-        if not filepath.exists():
-            raise FileNotFoundError(f"TDX data file not found: {filepath}")
+        p = period
+        if p in ("min1", "1分"):
+            p = "1m"
+        elif p in ("min5", "5分"):
+            p = "5m"
+        elif p in ("1min",):
+            p = "1m"
+        elif p in ("5min",):
+            p = "5m"
 
         start_int = int(start.replace("-", ""))
         end_int = int(end.replace("-", ""))
 
-        if period_normalized == "daily":
+        # --- Aggregate from daily ---
+        agg_fn = self.DAILY_AGG_MAP.get(p)
+        if agg_fn is not None:
+            filepath = self._resolve_path(code, market, "daily")
+            if not filepath.exists():
+                raise FileNotFoundError(f"TDX data file not found: {filepath}")
+            daily = self._read_day_file(filepath, start_int, end_int)
+            return self._aggregate_by_key(daily, agg_fn)
+
+        # --- Aggregate from 5-min (15m / 30m / 60m) ---
+        n_bars = self.MIN5_AGG_BARS.get(p)
+        if n_bars is not None:
+            filepath = self._resolve_path(code, market, "5min")
+            if not filepath.exists():
+                raise FileNotFoundError(f"TDX 5-min data file not found: {filepath}")
+            m5 = self._read_min_file(filepath, start_int, end_int)
+            return self._aggregate_n(m5, n_bars)
+
+        # --- Raw files: daily / 5m / 1m ---
+        if p == "daily":
+            filepath = self._resolve_path(code, market, "daily")
+        elif p == "5m":
+            filepath = self._resolve_path(code, market, "5min")
+        elif p == "1m":
+            filepath = self._resolve_path(code, market, "1min")
+        else:
+            raise ValueError(f"TdxAdapter: unsupported period '{period}'")
+
+        if not filepath.exists():
+            raise FileNotFoundError(f"TDX data file not found: {filepath}")
+
+        if p == "daily":
             return self._read_day_file(filepath, start_int, end_int)
         else:
             return self._read_min_file(filepath, start_int, end_int)
+
+    @staticmethod
+    def _aggregate_n(candles: list[Candle], n: int) -> list[Candle]:
+        """Aggregate every N consecutive candles into one bar."""
+        if not candles:
+            return []
+        result: list[Candle] = []
+        for i in range(0, len(candles), n):
+            chunk = candles[i:i + n]
+            result.append(TdxAdapter._merge_candles(chunk))
+        return result
 
     def fetch_stock_list(self) -> list[dict]:
         """Scan the data directory for available .day files."""

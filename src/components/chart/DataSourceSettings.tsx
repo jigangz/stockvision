@@ -117,6 +117,8 @@ const PULL_DAYS_OPTIONS = [
   { label: '730天 (2年)', value: 730 },
   { label: '1095天 (3年)', value: 1095 },
   { label: '1825天 (5年)', value: 1825 },
+  { label: '3650天 (10年)', value: 3650 },
+  { label: '全部历史', value: 99999 },
 ];
 
 export function DataSourceSettings({ onClose }: Props): React.ReactElement {
@@ -471,10 +473,16 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
               <div style={rowStyle}>
                 <span style={labelStyle}>拉取天数:</span>
                 <select
-                  value={displayDays}
-                  onChange={(e) => void handleDisplayDaysChange(Number(e.target.value))}
+                  value={PULL_DAYS_OPTIONS.some((o) => o.value === displayDays) ? displayDays : ''}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    if (v > 0) void handleDisplayDaysChange(v);
+                  }}
                   style={{ ...inputStyle, width: 200 }}
                 >
+                  {!PULL_DAYS_OPTIONS.some((o) => o.value === displayDays) && (
+                    <option value="" disabled>自定义: {displayDays}天</option>
+                  )}
                   {PULL_DAYS_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}

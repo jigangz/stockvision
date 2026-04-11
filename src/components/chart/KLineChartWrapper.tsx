@@ -101,22 +101,6 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
         }
       });
 
-      // v9: Register lazy loading callback for scrolling left
-      chart.loadMore((_timestamp) => {
-        const store = useDataStore.getState();
-        if (store.allLoaded || store.loadingMore) return;
-
-        const prevCount = store.candles.length;
-        void store.fetchMoreBars().then(() => {
-          const next = useDataStore.getState();
-          const addedCount = next.candles.length - prevCount;
-          if (addedCount > 0) {
-            const olderBars = toKLineData(next.candles.slice(0, addedCount));
-            chart.applyMoreData(olderBars, !next.allLoaded);
-          }
-        });
-      });
-
       // Resize chart when container size changes (e.g. window maximize)
       const ro = new ResizeObserver(() => {
         chartRef.current?.resize();
@@ -136,10 +120,15 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
     // v9: Push data directly when candles change
     useEffect(() => {
       const chart = chartRef.current;
-      if (!chart || !candles.length) return;
+      if (!chart) return;
 
-      const store = useDataStore.getState();
-      chart.applyNewData(toKLineData(candles), !store.allLoaded);
+      if (!candles.length) {
+        // Stock switched — clear chart's internal data to free memory
+        chart.clearData();
+        return;
+      }
+
+      chart.applyNewData(toKLineData(candles), false);
     }, [candles]);
 
     // Update upper indicator when selection or params change

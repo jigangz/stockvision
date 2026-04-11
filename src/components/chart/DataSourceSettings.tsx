@@ -485,15 +485,14 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
                 <input
                   type="number"
                   min={1}
-                  max={3650}
                   value={displayDays}
                   onChange={(e) => {
                     const v = parseInt(e.target.value, 10);
-                    if (v > 0 && v <= 3650) void handleDisplayDaysChange(v);
+                    if (v > 0) void handleDisplayDaysChange(v);
                   }}
                   style={{ ...inputStyle, width: 100 }}
                 />
-                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>天 (1-3650)</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>天</span>
               </div>
 
               <div style={{

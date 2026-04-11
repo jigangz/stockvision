@@ -86,55 +86,75 @@ class TdxAdapter(DataAdapter):
         return f"{hour:02d}:{minute:02d}"
 
     def _read_day_file(self, filepath: Path, start_int: int, end_int: int) -> list[Candle]:
-        """Read .day binary file."""
+        """Read .day binary file — bulk read + binary search for speed."""
+        raw = filepath.read_bytes()
+        total = len(raw) // self.DAY_RECORD_SIZE
+        if total == 0:
+            return []
+
+        # Binary search for start position (dates are sorted ascending)
+        lo, hi = 0, total
+        while lo < hi:
+            mid = (lo + hi) // 2
+            d = struct.unpack_from("<i", raw, mid * self.DAY_RECORD_SIZE)[0]
+            if d < start_int:
+                lo = mid + 1
+            else:
+                hi = mid
+
+        # Batch unpack from start position
         candles: list[Candle] = []
-        with open(filepath, "rb") as f:
-            while True:
-                data = f.read(self.DAY_RECORD_SIZE)
-                if len(data) < self.DAY_RECORD_SIZE:
-                    break
-                date_int, open_raw, high_raw, low_raw, close_raw, amount, volume, _ = struct.unpack(
-                    self.DAY_RECORD_FORMAT, data
-                )
-                if date_int < start_int or date_int > end_int:
-                    continue
-                date_str = f"{date_int // 10000}-{(date_int % 10000) // 100:02d}-{date_int % 100:02d}"
-                candles.append(Candle(
-                    date=date_str,
-                    open=open_raw / 100.0,
-                    high=high_raw / 100.0,
-                    low=low_raw / 100.0,
-                    close=close_raw / 100.0,
-                    volume=float(volume),
-                    amount=float(amount),
-                ))
+        fmt = self.DAY_RECORD_FORMAT
+        size = self.DAY_RECORD_SIZE
+        for i in range(lo, total):
+            offset = i * size
+            date_int, open_raw, high_raw, low_raw, close_raw, amount, volume, _ = struct.unpack_from(fmt, raw, offset)
+            if date_int > end_int:
+                break
+            date_str = f"{date_int // 10000}-{(date_int % 10000) // 100:02d}-{date_int % 100:02d}"
+            candles.append(Candle(
+                date=date_str,
+                open=open_raw / 100.0,
+                high=high_raw / 100.0,
+                low=low_raw / 100.0,
+                close=close_raw / 100.0,
+                volume=float(volume),
+                amount=float(amount),
+            ))
         return candles
 
     def _read_min_file(self, filepath: Path, start_int: int, end_int: int) -> list[Candle]:
-        """Read .5 or .1 binary file (intraday data)."""
+        """Read .5 or .1 binary file (intraday data) — bulk read for speed."""
+        raw = filepath.read_bytes()
+        total = len(raw) // self.MIN_RECORD_SIZE
+        if total == 0:
+            return []
+
         candles: list[Candle] = []
-        with open(filepath, "rb") as f:
-            while True:
-                data = f.read(self.MIN_RECORD_SIZE)
-                if len(data) < self.MIN_RECORD_SIZE:
-                    break
-                date_raw, time_raw, open_p, high_p, low_p, close_p, amount, volume = struct.unpack(
-                    self.MIN_RECORD_FORMAT, data
-                )
-                date_str = self._decode_min_date(date_raw)
-                date_int = int(date_str.replace("-", ""))
-                if date_int < start_int or date_int > end_int:
-                    continue
-                time_str = self._decode_min_time(time_raw)
-                candles.append(Candle(
-                    date=f"{date_str} {time_str}",
-                    open=round(open_p, 2),
-                    high=round(high_p, 2),
-                    low=round(low_p, 2),
-                    close=round(close_p, 2),
-                    volume=float(volume),
-                    amount=float(amount),
-                ))
+        fmt = self.MIN_RECORD_FORMAT
+        size = self.MIN_RECORD_SIZE
+        decode_date = self._decode_min_date
+        decode_time = self._decode_min_time
+
+        for i in range(total):
+            offset = i * size
+            date_raw, time_raw, open_p, high_p, low_p, close_p, amount, volume = struct.unpack_from(fmt, raw, offset)
+            date_str = decode_date(date_raw)
+            date_int = int(date_str.replace("-", ""))
+            if date_int < start_int:
+                continue
+            if date_int > end_int:
+                break
+            time_str = decode_time(time_raw)
+            candles.append(Candle(
+                date=f"{date_str} {time_str}",
+                open=round(open_p, 2),
+                high=round(high_p, 2),
+                low=round(low_p, 2),
+                close=round(close_p, 2),
+                volume=float(volume),
+                amount=float(amount),
+            ))
         return candles
 
     @staticmethod

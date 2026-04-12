@@ -86,7 +86,7 @@ export function ChartSettingsDialog({ onClose }: Props) {
 
   const handleSave = () => {
     const ro = Math.max(0, Math.min(200, parseInt(rightOffset, 10) || 30));
-    const dd = Math.max(30, Math.min(3000, parseInt(displayDays, 10) || 280));
+    const dd = Math.max(10, parseInt(displayDays, 10) || 280);
     store.setRightOffset(ro);
     store.setDisplayDays(dd);
     void store.saveSettings({ rightOffset: ro, displayDays: dd });
@@ -99,6 +99,17 @@ export function ChartSettingsDialog({ onClose }: Props) {
         <div style={title}>图表设置</div>
 
         <div style={row}>
+          <span style={label}>默认显示天数</span>
+          <input
+            style={input}
+            type="number"
+            min={10}
+            value={displayDays}
+            onChange={(e) => setDisplayDays(e.target.value)}
+          />
+        </div>
+
+        <div style={row}>
           <span style={label}>右侧空白 (K线数)</span>
           <input
             style={input}
@@ -107,18 +118,6 @@ export function ChartSettingsDialog({ onClose }: Props) {
             max={200}
             value={rightOffset}
             onChange={(e) => setRightOffset(e.target.value)}
-          />
-        </div>
-
-        <div style={row}>
-          <span style={label}>显示天数</span>
-          <input
-            style={input}
-            type="number"
-            min={30}
-            max={3000}
-            value={displayDays}
-            onChange={(e) => setDisplayDays(e.target.value)}
           />
         </div>
 

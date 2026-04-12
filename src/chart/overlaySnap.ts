@@ -5,8 +5,8 @@
  */
 import type { Drawing } from '@/stores/drawingStore';
 
-const SNAP_THRESHOLD_PRICE_RATIO = 0.005; // 0.5% of price range
-const SNAP_THRESHOLD_TIME_BARS = 2; // snap within 2 bars
+const SNAP_THRESHOLD_PRICE_RATIO = 0.02; // 2% of visible price range
+const SNAP_THRESHOLD_TIME_BARS = 3; // snap within 3 bars
 
 interface SnapTarget {
   timestamp?: number;
@@ -23,6 +23,7 @@ export function findSnapTarget(
   cursorPrice: number,
   priceRange: number, // visible price range for threshold calculation
   barInterval: number, // seconds per bar for time threshold
+  extraHPrices?: number[], // additional horizontal price levels (e.g. manual min/max)
 ): SnapTarget | null {
   const priceThreshold = priceRange * SNAP_THRESHOLD_PRICE_RATIO;
   const timeThreshold = barInterval * SNAP_THRESHOLD_TIME_BARS;
@@ -44,6 +45,11 @@ export function findSnapTarget(
     if (d.type === 'horizontal' || d.type === 'price_line') {
       if (d.points.length > 0) hPrices.push(d.points[0].price);
     }
+  }
+
+  // Add extra horizontal price levels (manual min/max lines, etc.)
+  if (extraHPrices) {
+    for (const p of extraHPrices) hPrices.push(p);
 
     // Vertical lines have all points at same time
     if (d.type === 'vertical') {

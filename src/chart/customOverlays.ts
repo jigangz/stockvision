@@ -243,11 +243,10 @@ const gannAngleOverlay: OverlayTemplate = {
     // 1×1 base slope: 45° in the chosen direction (magnitude 1 in pixel space)
     const baseSlope = dirY / dirX;
     const extendX = dirX * bounding.width * 3;
-    const labelDist = dirX * Math.min(300, bounding.width * 0.4);
     const figures: unknown[] = [];
 
     for (let i = 0; i < GANN_RATIOS.length; i++) {
-      const { ratio, label } = GANN_RATIOS[i];
+      const { ratio } = GANN_RATIOS[i];
       const slope = baseSlope * ratio;
       const endX = p0.x + extendX;
       const endY = p0.y + slope * extendX;
@@ -255,17 +254,6 @@ const gannAngleOverlay: OverlayTemplate = {
         type: 'line',
         attrs: { coordinates: [p0, { x: endX, y: endY }] },
         styles: { color: GANN_COLORS[i], size: ratio === 1 ? 2 : 1 },
-      });
-      figures.push({
-        type: 'text',
-        attrs: {
-          x: p0.x + labelDist,
-          y: p0.y + slope * labelDist - 10 * dirY,
-          text: label,
-          align: dirX >= 0 ? 'left' : 'right',
-          baseline: dirY >= 0 ? 'top' : 'bottom',
-        },
-        styles: { color: GANN_COLORS[i], size: 10 },
       });
     }
     return figures as ReturnType<NonNullable<OverlayTemplate['createPointFigures']>>;
@@ -290,28 +278,16 @@ const gannFanOverlay: OverlayTemplate = {
     const dirY = dy >= 0 ? 1 : -1;
     const baseSlope = dirY / dirX;
     const extendX = dirX * bounding.width * 3;
-    const labelDist = dirX * Math.min(250, bounding.width * 0.35);
     const figures: unknown[] = [];
 
     // Primary fan in chosen direction (solid)
     for (let i = 0; i < GANN_RATIOS.length; i++) {
-      const { ratio, label } = GANN_RATIOS[i];
+      const { ratio } = GANN_RATIOS[i];
       const slope = baseSlope * ratio;
       figures.push({
         type: 'line',
         attrs: { coordinates: [p0, { x: p0.x + extendX, y: p0.y + slope * extendX }] },
         styles: { color: GANN_COLORS[i], size: ratio === 1 ? 2 : 1 },
-      });
-      figures.push({
-        type: 'text',
-        attrs: {
-          x: p0.x + labelDist,
-          y: p0.y + slope * labelDist - 8 * dirY,
-          text: label,
-          align: dirX >= 0 ? 'left' : 'right',
-          baseline: dirY >= 0 ? 'top' : 'bottom',
-        },
-        styles: { color: GANN_COLORS[i], size: 9 },
       });
     }
 

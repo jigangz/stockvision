@@ -1,9 +1,40 @@
 import { useEffect, useRef } from 'react';
 import { ActionType } from 'klinecharts';
 import type { KLineChartWrapperHandle } from '@/components/chart/KLineChartWrapper';
+import { scrollFitAll } from '@/chart/patchBarSpace';
 import { useChartStore } from '@/stores/chartStore';
 import { useCrosshairStore } from '@/stores/crosshairStore';
 import { useDrawingStore } from '@/stores/drawingStore';
+
+/**
+ * HQChart-style zoom presets: [barWidth, gapWidth]
+ * Index 0 = most zoomed in, index 19 = most zoomed out (1px per bar).
+ * Total barSpace = barWidth + gapWidth.
+ */
+const ZOOM_SEED: [number, number][] = [
+  [48, 10], [44, 10], [40, 9], [36, 9],
+  [32, 8],  [28, 8],  [24, 7], [20, 7],
+  [18, 6],  [16, 6],  [15, 5], [13, 5],
+  [9, 4],   [7, 4],   [5, 4],  [3, 3],
+  [3, 1],   [2, 1],   [1, 1],  [1, 0],
+];
+
+const MAX_ZOOM_INDEX = ZOOM_SEED.length - 1;
+
+/** Find the closest zoom index for a given barSpace value. */
+function findClosestZoomIndex(barSpace: number): number {
+  let best = 0;
+  let bestDiff = Infinity;
+  for (let i = 0; i < ZOOM_SEED.length; i++) {
+    const total = ZOOM_SEED[i][0] + ZOOM_SEED[i][1];
+    const diff = Math.abs(total - barSpace);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      best = i;
+    }
+  }
+  return best;
+}
 
 interface Options {
   chartWrapper: React.RefObject<KLineChartWrapperHandle | null>;
@@ -28,6 +59,11 @@ export function useKeyboardShortcuts({
   });
 
   const keyboardNavRef = useRef(false);
+  const zoomIndexRef = useRef<number | null>(null);
+  /** Long-press auto-repeat state */
+  const repeatRef = useRef<{ key: string; timer: ReturnType<typeof setTimeout> | null; interval: ReturnType<typeof setInterval> | null }>({
+    key: '', timer: null, interval: null,
+  });
 
   useEffect(() => {
     const exitNavMode = () => {
@@ -36,7 +72,6 @@ export function useKeyboardShortcuts({
         useCrosshairStore.getState().clear();
       }
     };
-    // Click on chart → set activeBarIndex to the hovered bar (so arrow keys start from there)
     const handleClick = () => {
       if (keyboardNavRef.current) {
         keyboardNavRef.current = false;
@@ -56,6 +91,61 @@ export function useKeyboardShortcuts({
   }, []);
 
   useEffect(() => {
+    /** Move crosshair by one bar, scroll chart if at visible edge. */
+    function moveCrosshair(direction: -1 | 1) {
+      const cwRef = optsRef.current.chartWrapper;
+      const chart = cwRef.current?.chart;
+      if (!chart) return;
+
+      const klineData = chart.getDataList();
+      if (!klineData.length) return;
+
+      keyboardNavRef.current = true;
+      const { activeBarIndex } = useCrosshairStore.getState();
+      const visible = chart.getVisibleRange();
+
+      // First press: start from last hovered position, or rightmost visible bar
+      let startIdx: number;
+      if (activeBarIndex != null) {
+        startIdx = activeBarIndex;
+      } else {
+        const hovered = cwRef.current?.lastHoveredDataIndex;
+        startIdx = hovered ?? Math.min(visible.to - 1, klineData.length - 1);
+      }
+
+      const nextIndex = Math.max(0, Math.min(klineData.length - 1, startIdx + direction));
+      if (nextIndex === startIdx) return;
+
+      // At visible edge → scroll chart by one bar width to keep crosshair visible
+      if (nextIndex <= visible.from || nextIndex >= visible.to - 1) {
+        const barSpace = chart.getBarSpace();
+        chart.scrollByDistance(direction * -barSpace);
+      }
+
+      const bar = klineData[nextIndex];
+      if (bar) {
+        const coord = chart.convertToPixel(
+          { timestamp: bar.timestamp, value: bar.close },
+          { paneId: 'candle_pane' },
+        );
+        chart.executeAction(ActionType.OnCrosshairChange, {
+          x: (coord as { x?: number }).x,
+          y: (coord as { y?: number }).y,
+          paneId: 'candle_pane',
+          dataIndex: nextIndex,
+          kLineData: bar,
+        });
+      }
+      useCrosshairStore.getState().setPosition({ activeBarIndex: nextIndex });
+    }
+
+    function clearRepeat() {
+      const r = repeatRef.current;
+      if (r.timer) { clearTimeout(r.timer); r.timer = null; }
+      if (r.interval) { clearInterval(r.interval); r.interval = null; }
+      r.key = '';
+    }
+
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       const inInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
@@ -101,57 +191,110 @@ export function useKeyboardShortcuts({
         return;
       }
 
+      // Left/Right: move crosshair one bar, scroll at edge, long-press auto-repeat
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-        const { activeBarIndex } = useCrosshairStore.getState();
-        const klineData = chart ? chart.getDataList() : [];
-        if (!klineData.length || !chart) { e.preventDefault(); return; }
-
-        keyboardNavRef.current = true;
-        const startIdx = activeBarIndex ?? klineData.length - 1;
-        let nextIndex = startIdx;
-        if (e.key === 'ArrowLeft') nextIndex = Math.max(0, startIdx - 1);
-        if (e.key === 'ArrowRight') nextIndex = Math.min(klineData.length - 1, startIdx + 1);
-
-        chart.scrollToDataIndex(nextIndex);
-        const bar = klineData[nextIndex];
-        if (bar) {
-          // Convert data point to pixel coordinates for precise crosshair positioning
-          const coord = chart.convertToPixel(
-            { timestamp: bar.timestamp, value: bar.close },
-            { paneId: 'candle_pane' },
-          );
-          chart.executeAction(ActionType.OnCrosshairChange, {
-            x: (coord as { x?: number }).x,
-            y: (coord as { y?: number }).y,
-            paneId: 'candle_pane',
-            dataIndex: nextIndex,
-            kLineData: bar,
-          });
-        }
-        useCrosshairStore.getState().setPosition({ activeBarIndex: nextIndex });
         e.preventDefault();
+        if (e.repeat) return; // let our own repeat handle it
+
+        const dir: -1 | 1 = e.key === 'ArrowLeft' ? -1 : 1;
+        moveCrosshair(dir);
+
+        // Start long-press timer (500ms delay, then 80ms repeat)
+        clearRepeat();
+        repeatRef.current.key = e.key;
+        repeatRef.current.timer = setTimeout(() => {
+          repeatRef.current.interval = setInterval(() => moveCrosshair(dir), 80);
+        }, 500);
         return;
       }
 
-      // Up/Down: zoom in/out anchored at the right edge (通达信 style)
+      // Up/Down: stepped zoom using ZOOM_SEED (HQChart/通达信 style)
+      // Beyond ZOOM_SEED[19] = [1,0], continue with sub-pixel barSpace
+      // so 8000+ bars can fit on one screen (like TDX extreme zoom out).
       if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'PageUp' || e.key === 'PageDown') {
         e.preventDefault();
         if (!chart) return;
-        // Get chart width to anchor zoom at right edge
+
+        const klineData = chart.getDataList();
+        const totalBars = klineData.length;
         const chartEl = (chart as unknown as { getContainer?: () => HTMLElement }).getContainer?.();
-        const rightX = chartEl ? chartEl.clientWidth - 60 : 800; // 60px for Y-axis area
-        const scale = e.key === 'ArrowUp' ? 1.2
-          : e.key === 'ArrowDown' ? 0.8
-          : e.key === 'PageUp' ? 1.4
-          : 0.7;
-        chart.zoomAtCoordinate(scale, { x: rightX, y: 0 });
+        const chartWidth = chartEl ? chartEl.clientWidth - 60 : 800;
+        const currentBarSpace = chart.getBarSpace();
+        const isZoomIn = e.key === 'ArrowUp' || e.key === 'PageUp';
+
+        // Init zoomIndex from current barSpace if needed
+        if (zoomIndexRef.current === null) {
+          zoomIndexRef.current = findClosestZoomIndex(currentBarSpace);
+        }
+
+        // Minimum possible barSpace: fit all bars in chart width
+        const fitAllBarSpace = totalBars > 0 ? chartWidth / totalBars : 1;
+
+        if (isZoomIn) {
+          // --- ZOOM IN ---
+          const step = e.key === 'PageUp' ? 3 : 1;
+          if (currentBarSpace < 1) {
+            // Currently sub-pixel → zoom in by doubling
+            const newBarSpace = Math.min(1, currentBarSpace * (e.key === 'PageUp' ? 8 : 2));
+            if (newBarSpace >= 1) {
+              // Back to ZOOM_SEED range
+              zoomIndexRef.current = MAX_ZOOM_INDEX;
+              chart.setBarSpace(ZOOM_SEED[MAX_ZOOM_INDEX][0] + ZOOM_SEED[MAX_ZOOM_INDEX][1]);
+            } else {
+              chart.setBarSpace(newBarSpace);
+              scrollFitAll(chart);
+            }
+          } else {
+            // In ZOOM_SEED range
+            const idx = Math.max(0, zoomIndexRef.current - step);
+            zoomIndexRef.current = idx;
+            chart.setBarSpace(ZOOM_SEED[idx][0] + ZOOM_SEED[idx][1]);
+          }
+        } else {
+          // --- ZOOM OUT ---
+          const step = e.key === 'PageDown' ? 3 : 1;
+          if (zoomIndexRef.current < MAX_ZOOM_INDEX) {
+            // Still in ZOOM_SEED range
+            const idx = Math.min(MAX_ZOOM_INDEX, zoomIndexRef.current + step);
+            zoomIndexRef.current = idx;
+            const newBarSpace = ZOOM_SEED[idx][0] + ZOOM_SEED[idx][1];
+            chart.setBarSpace(newBarSpace);
+
+            // If all data fits after this zoom, remove left gap
+            if (totalBars <= chartWidth / newBarSpace) {
+              scrollFitAll(chart);
+            }
+          } else {
+            // At or beyond ZOOM_SEED max → sub-pixel zoom
+            const newBarSpace = Math.max(
+              fitAllBarSpace,
+              currentBarSpace * (e.key === 'PageDown' ? 0.125 : 0.5),
+            );
+            if (newBarSpace < currentBarSpace) {
+              chart.setBarSpace(newBarSpace);
+              scrollFitAll(chart);
+            }
+          }
+        }
         return;
       }
+
       if (e.key === 'Home') { e.preventDefault(); if (chart) chart.scrollToDataIndex(0); return; }
       if (e.key === 'End') { e.preventDefault(); if (chart) chart.scrollToRealTime(); return; }
     };
 
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === repeatRef.current.key) {
+        clearRepeat();
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      clearRepeat();
+    };
   }, []);
 }

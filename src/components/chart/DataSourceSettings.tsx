@@ -145,8 +145,8 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
   const [syncing, setSyncing] = useState(false);
   const dragSrcIdx = useRef<number | null>(null);
 
-  const displayDays = useChartSettingsStore((s) => s.displayDays);
-  const setDisplayDays = useChartSettingsStore((s) => s.setDisplayDays);
+  const fetchDays = useChartSettingsStore((s) => s.fetchDays);
+  const setFetchDays = useChartSettingsStore((s) => s.setFetchDays);
   const saveSettings = useChartSettingsStore((s) => s.saveSettings);
 
   // Load config on mount
@@ -234,7 +234,7 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
       // Re-fetch kline data with the new adapter
       const end = new Date().toISOString().slice(0, 10);
       const d = new Date();
-      d.setDate(d.getDate() - displayDays);
+      d.setDate(d.getDate() - fetchDays);
       const start = d.toISOString().slice(0, 10);
       void fetchKlineInitial(currentCode, currentMarket, currentPeriod, start, end);
     } catch {
@@ -315,8 +315,8 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
   }
 
   async function handleDisplayDaysChange(days: number): Promise<void> {
-    setDisplayDays(days);
-    await saveSettings({ displayDays: days });
+    setFetchDays(days);
+    await saveSettings({ fetchDays: days });
   }
 
   const tabBtn = (tab: Tab): React.CSSProperties => ({
@@ -473,15 +473,15 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
               <div style={rowStyle}>
                 <span style={labelStyle}>拉取天数:</span>
                 <select
-                  value={PULL_DAYS_OPTIONS.some((o) => o.value === displayDays) ? displayDays : ''}
+                  value={PULL_DAYS_OPTIONS.some((o) => o.value === fetchDays) ? fetchDays : ''}
                   onChange={(e) => {
                     const v = Number(e.target.value);
                     if (v > 0) void handleDisplayDaysChange(v);
                   }}
                   style={{ ...inputStyle, width: 200 }}
                 >
-                  {!PULL_DAYS_OPTIONS.some((o) => o.value === displayDays) && (
-                    <option value="" disabled>自定义: {displayDays}天</option>
+                  {!PULL_DAYS_OPTIONS.some((o) => o.value === fetchDays) && (
+                    <option value="" disabled>自定义: {fetchDays}天</option>
                   )}
                   {PULL_DAYS_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -493,7 +493,7 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
                 <input
                   type="number"
                   min={1}
-                  value={displayDays}
+                  value={fetchDays}
                   onChange={(e) => {
                     const v = parseInt(e.target.value, 10);
                     if (v > 0) void handleDisplayDaysChange(v);
@@ -508,7 +508,7 @@ export function DataSourceSettings({ onClose }: Props): React.ReactElement {
                 borderRadius: 3, padding: 10, marginTop: 8,
               }}>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.8 }}>
-                  <div>当前设置: 拉取最近 <span style={{ color: '#FFFF00' }}>{displayDays}</span> 天的历史数据</div>
+                  <div>当前设置: 拉取最近 <span style={{ color: '#FFFF00' }}>{fetchDays}</span> 天的历史数据</div>
                   <div>- 30天: 适合短线看盘，加载最快</div>
                   <div>- 280天 (默认): 约1年数据，满足大部分技术分析需求</div>
                   <div>- 730天+: 适合长线分析，首次加载较慢</div>

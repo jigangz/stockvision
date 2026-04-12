@@ -10,6 +10,7 @@ import { useChartSettingsStore } from '@/stores/chartSettingsStore';
 import { useIndicatorStore } from '@/stores/indicatorStore';
 import { useMAStore, getMACalcParams } from '@/stores/maStore';
 import { toKLineData } from '@/chart/dataAdapter';
+import { patchSubPixelZoom, scrollFitAll } from '@/chart/patchBarSpace';
 import { darkStyles } from '@/theme/klineTheme';
 
 export interface KLineChartWrapperHandle {
@@ -36,6 +37,7 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
     const candles = useDataStore((s) => s.candles);
     const zoomLevel = useChartStore((s) => s.zoomLevel);
     const rightOffset = useChartSettingsStore((s) => s.rightOffset);
+    const displayDays = useChartSettingsStore((s) => s.displayDays);
     const priceScaleMode = useChartSettingsStore((s) => s.priceScaleMode);
     const priceMin = useChartSettingsStore((s) => s.priceMin);
     const priceMax = useChartSettingsStore((s) => s.priceMax);
@@ -64,6 +66,9 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       });
       if (!chart) return;
       chartRef.current = chart;
+
+      // Allow sub-pixel barSpace for extreme zoom out (TDX-style 8000+ bars)
+      patchSubPixelZoom(chart);
 
       // Use custom Y-axis that can inject manual min/max tick labels
       chart.setPaneOptions({ id: 'candle_pane', axisOptions: { name: 'manualRangeYAxis' } });
@@ -129,7 +134,39 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
       }
 
       chart.applyNewData(toKLineData(candles), false);
+
+      // Set initial zoom based on displayDays setting
+      const displayDays = useChartSettingsStore.getState().displayDays;
+      const barsToShow = Math.min(candles.length, displayDays);
+      const chartEl = (chart as unknown as { getContainer?: () => HTMLElement }).getContainer?.();
+      const chartWidth = chartEl ? chartEl.clientWidth - 60 : 800;
+      const barSpace = Math.max(0.01, chartWidth / barsToShow);
+      chart.setBarSpace(barSpace);
+      if (barSpace < 1) {
+        scrollFitAll(chart);
+      } else {
+        chart.scrollToRealTime();
+      }
     }, [candles]);
+
+    // Re-zoom when displayDays setting changes (without reloading data)
+    useEffect(() => {
+      const chart = chartRef.current;
+      if (!chart) return;
+      const klineData = chart.getDataList();
+      if (!klineData.length) return;
+
+      const barsToShow = Math.min(klineData.length, displayDays);
+      const chartEl = (chart as unknown as { getContainer?: () => HTMLElement }).getContainer?.();
+      const chartWidth = chartEl ? chartEl.clientWidth - 60 : 800;
+      const barSpace = Math.max(0.01, chartWidth / barsToShow);
+      chart.setBarSpace(barSpace);
+      if (barSpace < 1) {
+        scrollFitAll(chart);
+      } else {
+        chart.scrollToRealTime();
+      }
+    }, [displayDays]);
 
     // Update upper indicator when selection or params change
     useEffect(() => {
@@ -269,43 +306,29 @@ export const KLineChartWrapper = forwardRef<KLineChartWrapperHandle>(
         });
         c.adjustPaneViewport(false, true, true, true, true);
 
-        // Check if min/max already appear as ticks
-        const firstTick = Math.ceil(displayMin / tickInterval) * tickInterval;
-        const lastTick = Math.floor(displayMax / tickInterval) * tickInterval;
-        const ticks: number[] = [];
-        for (let t = firstTick; t <= lastTick; t += tickInterval) {
-          ticks.push(Math.round(t * 1e8) / 1e8);
-        }
-        const minIsTick = ticks.some((t) => Math.abs(t - priceMin) < tickInterval * 0.01);
-        const maxIsTick = ticks.some((t) => Math.abs(t - priceMax) < tickInterval * 0.01);
-
-        // Add price line overlays for min/max if they're not already ticks
+        // Always add price line overlays for min/max
         const klineData = chart.getDataList();
         const ts = klineData.length > 0 ? klineData[0].timestamp : Date.now();
-        if (!maxIsTick) {
-          chart.createOverlay({
-            id: '__price_max_line',
-            name: 'priceLine',
-            points: [{ timestamp: ts, value: priceMax }],
-            styles: {
-              line: { style: 'dashed' as never, dashedValue: [4, 4], size: 1, color: '#2A4488' },
-              text: { color: '#CCCCCC', size: 10, borderSize: 0, backgroundColor: 'transparent' },
-            },
-            lock: true,
-          });
-        }
-        if (!minIsTick) {
-          chart.createOverlay({
-            id: '__price_min_line',
-            name: 'priceLine',
-            points: [{ timestamp: ts, value: priceMin }],
-            styles: {
-              line: { style: 'dashed' as never, dashedValue: [4, 4], size: 1, color: '#2A4488' },
-              text: { color: '#CCCCCC', size: 10, borderSize: 0, backgroundColor: 'transparent' },
-            },
-            lock: true,
-          });
-        }
+        chart.createOverlay({
+          id: '__price_max_line',
+          name: 'priceLine',
+          points: [{ timestamp: ts, value: priceMax }],
+          styles: {
+            line: { style: 'dashed' as never, dashedValue: [4, 4], size: 1, color: '#CCAA00' },
+            text: { color: '#CCCCCC', size: 10, borderSize: 0, backgroundColor: 'transparent' },
+          },
+          lock: true,
+        });
+        chart.createOverlay({
+          id: '__price_min_line',
+          name: 'priceLine',
+          points: [{ timestamp: ts, value: priceMin }],
+          styles: {
+            line: { style: 'dashed' as never, dashedValue: [4, 4], size: 1, color: '#CCAA00' },
+            text: { color: '#CCCCCC', size: 10, borderSize: 0, backgroundColor: 'transparent' },
+          },
+          lock: true,
+        });
 
         // Lock Y-axis dragging in manual mode (preserve custom axis name)
         chart.setPaneOptions({ id: 'candle_pane', axisOptions: { name: 'manualRangeYAxis', scrollZoomEnabled: false } });

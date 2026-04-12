@@ -33,7 +33,7 @@ export function ChartContainer(): React.ReactElement {
   const currentCode = useChartStore((s) => s.currentCode);
   const currentMarket = useChartStore((s) => s.currentMarket);
   const currentPeriod = useChartStore((s) => s.currentPeriod);
-  const displayDays = useChartSettingsStore((s) => s.displayDays);
+  const fetchDays = useChartSettingsStore((s) => s.fetchDays);
   const setRightOffset = useChartSettingsStore((s) => s.setRightOffset);
   const fetchSettings = useChartSettingsStore((s) => s.fetchSettings);
   const loadDrawings = useDrawingStore((s) => s.loadDrawings);
@@ -71,16 +71,16 @@ export function ChartContainer(): React.ReactElement {
 
   const getStartDate = useCallback(() => {
     const d = new Date();
-    d.setDate(d.getDate() - displayDays);
+    d.setDate(d.getDate() - fetchDays);
     return d.toISOString().slice(0, 10);
-  }, [displayDays]);
+  }, [fetchDays]);
 
   useEffect(() => {
     const start = getStartDate();
     const end = new Date().toISOString().slice(0, 10);
     void fetchKlineInitial(currentCode, currentMarket, currentPeriod, start, end);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentCode, currentMarket, currentPeriod, displayDays]);
+  }, [currentCode, currentMarket, currentPeriod, fetchDays]);
 
   useEffect(() => {
     void loadDrawings(currentCode, currentPeriod);

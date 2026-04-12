@@ -4,6 +4,7 @@ import type { Chart } from 'klinecharts';
 import { useDrawingStore, type Drawing } from '@/stores/drawingStore';
 import { getOverlayName } from '@/chart/overlayMapping';
 import { findSnapTarget } from '@/chart/overlaySnap';
+import { useChartSettingsStore } from '@/stores/chartSettingsStore';
 
 interface DrawingBridgeProps {
   chart: Chart | null;
@@ -23,6 +24,7 @@ export function DrawingBridge({ chart }: DrawingBridgeProps): null {
   const activeTool = useDrawingStore((s) => s.activeTool);
   const prevDrawingIdsRef = useRef<Set<string>>(new Set());
   const [ctrlHeld, setCtrlHeld] = useState(false);
+  const [drawSeq, setDrawSeq] = useState(0);
 
   // Track Ctrl key for K-line magnet mode
   useEffect(() => {
@@ -73,7 +75,7 @@ export function DrawingBridge({ chart }: DrawingBridgeProps): null {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (chart as any).createOverlay({
+    const overlayId = (chart as any).createOverlay({
       name: overlayName,
       mode: ctrlHeld ? OverlayMode.StrongMagnet : OverlayMode.Normal,
       modeSensitivity: 8,
@@ -122,7 +124,6 @@ export function DrawingBridge({ chart }: DrawingBridgeProps): null {
 
         // Default: snap to existing overlay lines/points/intersections
         const currentDrawings = useDrawingStore.getState().drawings;
-        if (currentDrawings.length === 0) return;
 
         const cursorTime = (pt.timestamp ?? 0) / 1000;
         const cursorPrice = pt.value ?? 0;
@@ -137,7 +138,17 @@ export function DrawingBridge({ chart }: DrawingBridgeProps): null {
           priceRange = maxP - minP || 10;
         }
 
-        const snap = findSnapTarget(currentDrawings, cursorTime, cursorPrice, priceRange, barInterval);
+        // Collect manual price range min/max as extra snap targets
+        const { priceScaleMode, priceMin, priceMax } = useChartSettingsStore.getState();
+        const extraH: number[] = [];
+        if (priceScaleMode === 'manual') {
+          if (priceMin != null) extraH.push(priceMin);
+          if (priceMax != null) extraH.push(priceMax);
+        }
+
+        if (currentDrawings.length === 0 && extraH.length === 0) return;
+
+        const snap = findSnapTarget(currentDrawings, cursorTime, cursorPrice, priceRange, barInterval, extraH);
         if (snap) {
           if (snap.timestamp != null) pt.timestamp = snap.timestamp;
           if (snap.value != null) pt.value = snap.value;
@@ -155,12 +166,24 @@ export function DrawingBridge({ chart }: DrawingBridgeProps): null {
           points,
           style: store.activeStyle,
         });
-        // Return false to remove KLineChart's temporary overlay;
-        // the bridge will re-create it from the store with a tracked ID
+        // Explicitly remove the temporary overlay after KLineChart finishes
+        // its internal callback processing (return false alone is unreliable in v9)
+        const tempId = overlayId;
+        if (tempId) {
+          queueMicrotask(() => chart.removeOverlay({ id: tempId }));
+        }
+        // Bump drawSeq to re-run the effect → create a new temp overlay
+        // so user can draw another line without re-selecting the tool
+        queueMicrotask(() => setDrawSeq((n) => n + 1));
         return false;
       },
     });
-  }, [activeTool, chart, ctrlHeld]);
+
+    return () => {
+      if (overlayId) chart.removeOverlay({ id: overlayId });
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTool, chart, ctrlHeld, drawSeq]);
 
   // Track Shift key globally via window property (accessible in callbacks)
   useEffect(() => {

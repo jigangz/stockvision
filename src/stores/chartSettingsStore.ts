@@ -19,6 +19,8 @@ export function getDefaultRightOffset(period: string): number {
 
 export interface ChartSettings {
   rightOffset: number;
+  fetchDays: number;
+  /** How many days to show on screen initially (zoom level). Separate from fetchDays. */
   displayDays: number;
   priceScaleMode: 'auto' | 'manual';
   priceMin: number | null;
@@ -27,6 +29,7 @@ export interface ChartSettings {
 
 interface ChartSettingsActions {
   setRightOffset: (v: number) => void;
+  setFetchDays: (v: number) => void;
   setDisplayDays: (v: number) => void;
   setPriceScale: (mode: 'auto' | 'manual', min?: number | null, max?: number | null) => void;
   fetchSettings: () => Promise<void>;
@@ -35,12 +38,14 @@ interface ChartSettingsActions {
 
 export const useChartSettingsStore = create<ChartSettings & ChartSettingsActions>((set, get) => ({
   rightOffset: 23,
+  fetchDays: 99999,
   displayDays: 280,
   priceScaleMode: 'auto',
   priceMin: null,
   priceMax: null,
 
   setRightOffset: (v: number) => set({ rightOffset: v }),
+  setFetchDays: (v: number) => set({ fetchDays: v }),
   setDisplayDays: (v: number) => set({ displayDays: v }),
   setPriceScale: (mode: 'auto' | 'manual', min: number | null = null, max: number | null = null) =>
     set({ priceScaleMode: mode, priceMin: min, priceMax: max }),
@@ -52,6 +57,7 @@ export const useChartSettingsStore = create<ChartSettings & ChartSettingsActions
       const data = (await res.json()) as Record<string, string>;
       const updates: Partial<ChartSettings> = {};
       if (data.rightOffset !== undefined) updates.rightOffset = parseInt(data.rightOffset, 10);
+      if (data.fetchDays !== undefined) updates.fetchDays = parseInt(data.fetchDays, 10);
       if (data.displayDays !== undefined) updates.displayDays = parseInt(data.displayDays, 10);
       if (data.priceScaleMode !== undefined) updates.priceScaleMode = data.priceScaleMode as 'auto' | 'manual';
       if (data.priceMin !== undefined) updates.priceMin = parseFloat(data.priceMin);
@@ -66,6 +72,7 @@ export const useChartSettingsStore = create<ChartSettings & ChartSettingsActions
     const state = { ...get(), ...overrides };
     const entries: Array<[string, string]> = [
       ['rightOffset', String(state.rightOffset)],
+      ['fetchDays', String(state.fetchDays)],
       ['displayDays', String(state.displayDays)],
       ['priceScaleMode', state.priceScaleMode],
     ];

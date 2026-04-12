@@ -45,16 +45,16 @@ export function findSnapTarget(
     if (d.type === 'horizontal' || d.type === 'price_line') {
       if (d.points.length > 0) hPrices.push(d.points[0].price);
     }
-  }
-
-  // Add extra horizontal price levels (manual min/max lines, etc.)
-  if (extraHPrices) {
-    for (const p of extraHPrices) hPrices.push(p);
 
     // Vertical lines have all points at same time
     if (d.type === 'vertical') {
       if (d.points.length > 0) vTimes.push(d.points[0].time);
     }
+  }
+
+  // Add extra horizontal price levels (manual min/max lines, etc.)
+  if (extraHPrices) {
+    for (const p of extraHPrices) hPrices.push(p);
   }
 
   // Check snap to horizontal line prices
